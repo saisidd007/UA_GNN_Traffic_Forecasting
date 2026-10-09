@@ -1,0 +1,50 @@
+{
+  "mae_mph": 2.1345752630432755,
+  "rmse_mph": 4.571892162133437,
+  "epistemic_variance_normalized": 0.047284528613090515,
+  "aleatoric_variance_normalized": 1.53524911403656,
+  "coverage_50": 0.7384132855194219,
+  "width_50_mph": 5.187804959885299,
+  "coverage_80": 0.9282947019737035,
+  "width_80_mph": 9.856975561299656,
+  "coverage_90": 0.9613436770726829,
+  "width_90_mph": 12.651278726544994,
+  "coverage_95": 0.9748988460912863,
+  "width_95_mph": 15.074930998497814,
+  "mae_by_horizon_mph": [
+    1.007531641134962,
+    1.3202988024776217,
+    1.5712722691728427,
+    1.7841158836515036,
+    1.9716625253772264,
+    2.141362843123488,
+    2.299161341845883,
+    2.4468808243273363,
+    2.582704869549247,
+    2.7100571925392765,
+    2.8313338900129703,
+    2.9485210733069533
+  ],
+  "observed_test_targets": 30444696,
+  "dataset": "PEMS-BAY",
+  "device": "cpu",
+  "seed": 42,
+  "epochs_completed": 50,
+  "max_epochs": 50,
+  "early_stopping_patience": 8,
+  "mc_passes": 30,
+  "best_epoch": 48,
+  "batch_size": 32,
+  "learning_rate": 0.001,
+  "windows": {
+    "train": 8192,
+    "val": 7806,
+    "test": 7807
+  },
+  "split_timestamps": [
+    "2017-05-07 17:05:00",
+    "2017-06-03 20:30:00"
+  ],
+  "graph_edges": 2694,
+  "graph_note": "PEMS-BAY supplied adjacency, threshold >0.1"
+}

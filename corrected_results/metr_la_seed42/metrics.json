@@ -1,0 +1,50 @@
+{
+  "mae_mph": 4.042643253563055,
+  "rmse_mph": 7.502336679317492,
+  "epistemic_variance_normalized": 0.026077281683683395,
+  "aleatoric_variance_normalized": 1.552005410194397,
+  "coverage_50": 0.7624545566509308,
+  "width_50_mph": 11.285702068076255,
+  "coverage_80": 0.9280061182133913,
+  "width_80_mph": 21.443151841158684,
+  "coverage_90": 0.9547268702115183,
+  "width_90_mph": 27.521960365128056,
+  "coverage_95": 0.9666890100014359,
+  "width_95_mph": 32.79444413608316,
+  "mae_by_horizon_mph": [
+    2.7003504426378147,
+    3.0368328228021473,
+    3.306273439426489,
+    3.5514712541958477,
+    3.787855144308328,
+    4.004611870451653,
+    4.215134565053442,
+    4.421306273815135,
+    4.609345819136691,
+    4.788167475339711,
+    4.960777353922015,
+    5.129733121656572
+  ],
+  "observed_test_targets": 11156198,
+  "dataset": "METR-LA",
+  "device": "cpu",
+  "seed": 42,
+  "epochs_completed": 50,
+  "max_epochs": 50,
+  "early_stopping_patience": 8,
+  "mc_passes": 30,
+  "best_epoch": 49,
+  "batch_size": 32,
+  "learning_rate": 0.001,
+  "windows": {
+    "train": 8192,
+    "val": 5130,
+    "test": 5130
+  },
+  "split_timestamps": [
+    "2012-05-23 07:10:00",
+    "2012-06-10 03:35:00"
+  ],
+  "graph_edges": 1863,
+  "graph_note": "METR-LA geographic 8-nearest-neighbor proxy (no adjacency file in checkout)"
+}
