@@ -1,0 +1,36 @@
+{
+  "dataset": "METR-LA",
+  "checkpoint": "results/enhanced_best_model.pt",
+  "variants": [
+    {
+      "Model Variant": "Full Model (all components)",
+      "MAE": 0.611,
+      "RMSE": 1.3212,
+      "MAE Degradation (%)": "Baseline"
+    },
+    {
+      "Model Variant": "w/o Diffusion Conv (GCN only)",
+      "MAE": 1.9693,
+      "RMSE": 2.8884,
+      "MAE Degradation (%)": "+222.30%"
+    },
+    {
+      "Model Variant": "w/o BiLSTM (Temporal Conv only)",
+      "MAE": 1.8852,
+      "RMSE": 3.0321,
+      "MAE Degradation (%)": "+208.53%"
+    },
+    {
+      "Model Variant": "w/o Graph Attention",
+      "MAE": 0.8106,
+      "RMSE": 1.4782,
+      "MAE Degradation (%)": "+32.65%"
+    },
+    {
+      "Model Variant": "w/o MC Dropout (Deterministic)",
+      "MAE": 0.6133,
+      "RMSE": 1.3489,
+      "MAE Degradation (%)": "+0.38%"
+    }
+  ]
+}

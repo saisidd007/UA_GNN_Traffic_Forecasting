@@ -1,0 +1,26 @@
+==================================================
+UA-GNN FINAL EVALUATION SUMMARY (METR-LA DATASET)
+==================================================
+
+1. OVERALL METRICS (Standardized / Normalized Latent Space):
+   - MAE: 0.609916
+   - RMSE: 1.317238
+   - R² Score: 0.661991
+   - Pearson Correlation: 0.813655
+   - Mean Aleatoric Uncertainty: 1.266244
+   - Mean Epistemic Uncertainty: 0.277434
+   - Mean Total Uncertainty: 1.543679
+
+2. PHYSICAL SPEED METRICS (Miles Per Hour, mph):
+   - Overall MAE: 3.4642 mph
+   - Overall RMSE: 6.5746 mph
+   - Overall MAPE: 9.65 %
+
+3. HORIZON-SPECIFIC METRICS (Physical mph):
+   - 15 min (step 3):  MAE = 3.0592 mph, RMSE = 5.6100 mph
+   - 30 min (step 6):  MAE = 3.4616 mph, RMSE = 6.5416 mph
+   - 45 min (step 9):  MAE = 3.7671 mph, RMSE = 7.2030 mph
+   - 60 min (step 12): MAE = 4.0401 mph, RMSE = 7.7800 mph
+
+4. CALIBRATION:
+   - Expected Calibration Error (ECE): 0.1614

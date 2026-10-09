@@ -1,0 +1,110 @@
+{
+  "METR-LA": [
+    {
+      "Model": "AGCRN (NeurIPS 2020)",
+      "15min MAE": 2.87,
+      "15min RMSE": 5.58,
+      "30min MAE": 3.23,
+      "30min RMSE": 6.58,
+      "60min MAE": 3.68,
+      "60min RMSE": 7.51,
+      "Overall MAPE (%)": 9.0,
+      "Params (K)": 748,
+      "Inference (ms)": 112.4,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "GMAN (AAAI 2020)",
+      "15min MAE": 2.77,
+      "15min RMSE": 5.48,
+      "30min MAE": 3.07,
+      "30min RMSE": 6.34,
+      "60min MAE": 3.4,
+      "60min RMSE": 7.21,
+      "Overall MAPE (%)": 8.35,
+      "Params (K)": 1050,
+      "Inference (ms)": 145.2,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "PDFormer (AAAI 2023)",
+      "15min MAE": 2.67,
+      "15min RMSE": 5.1,
+      "30min MAE": 3.02,
+      "30min RMSE": 6.13,
+      "60min MAE": 3.42,
+      "60min RMSE": 7.17,
+      "Overall MAPE (%)": 8.21,
+      "Params (K)": 1420,
+      "Inference (ms)": 168.0,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "UA-GNN (Ours, mph)",
+      "15min MAE": 3.06,
+      "15min RMSE": 5.61,
+      "30min MAE": 3.46,
+      "30min RMSE": 6.54,
+      "60min MAE": 4.04,
+      "60min RMSE": 7.78,
+      "Overall MAPE (%)": 9.65,
+      "Params (K)": 270,
+      "Inference (ms)": 59.3,
+      "UQ Support": "Yes (Alea + Epist)"
+    }
+  ],
+  "PEMS-BAY": [
+    {
+      "Model": "AGCRN (NeurIPS 2020)",
+      "15min MAE": 1.36,
+      "15min RMSE": 2.88,
+      "30min MAE": 1.71,
+      "30min RMSE": 3.84,
+      "60min MAE": 2.04,
+      "60min RMSE": 4.57,
+      "Overall MAPE (%)": 3.99,
+      "Params (K)": 748,
+      "Inference (ms)": 174.0,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "GMAN (AAAI 2020)",
+      "15min MAE": 1.3,
+      "15min RMSE": 2.76,
+      "30min MAE": 1.62,
+      "30min RMSE": 3.63,
+      "60min MAE": 1.86,
+      "60min RMSE": 4.32,
+      "Overall MAPE (%)": 3.63,
+      "Params (K)": 1050,
+      "Inference (ms)": 224.5,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "PDFormer (AAAI 2023)",
+      "15min MAE": 1.28,
+      "15min RMSE": 2.68,
+      "30min MAE": 1.58,
+      "30min RMSE": 3.52,
+      "60min MAE": 1.81,
+      "60min RMSE": 4.19,
+      "Overall MAPE (%)": 3.5,
+      "Params (K)": 1420,
+      "Inference (ms)": 258.0,
+      "UQ Support": "No (Deterministic)"
+    },
+    {
+      "Model": "UA-GNN (Ours, mph)",
+      "15min MAE": 1.3,
+      "15min RMSE": 2.74,
+      "30min MAE": 1.64,
+      "30min RMSE": 3.7,
+      "60min MAE": 2.07,
+      "60min RMSE": 4.74,
+      "Overall MAPE (%)": 3.85,
+      "Params (K)": 270,
+      "Inference (ms)": 59.3,
+      "UQ Support": "Yes (Alea + Epist)"
+    }
+  ]
+}

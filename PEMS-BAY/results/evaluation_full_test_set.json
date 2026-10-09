@@ -1,0 +1,34 @@
+{
+  "overall": {
+    "mae": 0.44603976607322693,
+    "rmse": 1.0604009628295898,
+    "num_predictions": 30478500
+  },
+  "per_horizon": {
+    "3-step (15 min)": {
+      "mae": 0.3722001314163208,
+      "rmse": 0.8014205694198608,
+      "step": 3
+    },
+    "6-step (30 min)": {
+      "mae": 0.45849835872650146,
+      "rmse": 1.0819774866104126,
+      "step": 6
+    },
+    "12-step (60 min)": {
+      "mae": 0.5468041300773621,
+      "rmse": 1.3089104890823364,
+      "step": 12
+    }
+  },
+  "official_baseline": {
+    "mae": 0.43919557332992554,
+    "rmse": 1.0326961278915405,
+    "source": "enhanced_best_model.pt (50-epoch training)",
+    "r2": 0.8385,
+    "correlation": 0.9158,
+    "aleatoric_uncertainty": 0.5508,
+    "epistemic_uncertainty": 0.256,
+    "total_uncertainty": 0.8069
+  }
+}

@@ -1,0 +1,6 @@
+Model Variant,MAE,RMSE,MAE Degradation (%)
+Full Model (all components),0.611,1.3212,Baseline
+w/o Diffusion Conv (GCN only),1.9693,2.8884,+222.30%
+w/o BiLSTM (Temporal Conv only),1.8852,3.0321,+208.53%
+w/o Graph Attention,0.8106,1.4782,+32.65%
+w/o MC Dropout (Deterministic),0.6133,1.3489,+0.38%

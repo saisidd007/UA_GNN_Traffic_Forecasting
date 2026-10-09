@@ -1,0 +1,119 @@
+{
+  "dataset": "METR-LA",
+  "speed_unit": "mph",
+  "evaluation_mode": "multi-horizon",
+  "our_model_normalized": {
+    "overall": {
+      "MAE": 0.6099,
+      "RMSE": 1.3172,
+      "R2": 0.662,
+      "Correlation": 0.8137
+    }
+  },
+  "our_model_raw_mph": {
+    "15min": {
+      "MAE": 3.0743,
+      "RMSE": 5.6297
+    },
+    "30min": {
+      "MAE": 3.4704,
+      "RMSE": 6.556
+    },
+    "60min": {
+      "MAE": 4.0342,
+      "RMSE": 7.7653
+    },
+    "overall": {
+      "MAE": 3.4642,
+      "RMSE": 6.5746,
+      "MAPE": 9.65
+    }
+  },
+  "published_literature_baselines": {
+    "DCRNN (ICLR 2018)": {
+      "15min": {
+        "MAE": 2.77,
+        "RMSE": 5.38,
+        "MAPE": 7.3
+      },
+      "30min": {
+        "MAE": 3.15,
+        "RMSE": 6.45,
+        "MAPE": 8.8
+      },
+      "60min": {
+        "MAE": 3.6,
+        "RMSE": 7.59,
+        "MAPE": 10.5
+      }
+    },
+    "Graph WaveNet (IJCAI 2019)": {
+      "15min": {
+        "MAE": 2.69,
+        "RMSE": 5.15,
+        "MAPE": 6.9
+      },
+      "30min": {
+        "MAE": 3.07,
+        "RMSE": 6.22,
+        "MAPE": 8.37
+      },
+      "60min": {
+        "MAE": 3.53,
+        "RMSE": 7.37,
+        "MAPE": 10.01
+      }
+    },
+    "STGCN (IJCAI 2018)": {
+      "15min": {
+        "MAE": 2.88,
+        "RMSE": 5.74,
+        "MAPE": 7.62
+      },
+      "30min": {
+        "MAE": 3.47,
+        "RMSE": 7.24,
+        "MAPE": 9.57
+      },
+      "60min": {
+        "MAE": 4.59,
+        "RMSE": 9.4,
+        "MAPE": 12.7
+      }
+    },
+    "AGCRN (NeurIPS 2020)": {
+      "15min": {
+        "MAE": 2.87,
+        "RMSE": 5.58,
+        "MAPE": 7.7
+      },
+      "30min": {
+        "MAE": 3.23,
+        "RMSE": 6.58,
+        "MAPE": 9.0
+      },
+      "60min": {
+        "MAE": 3.68,
+        "RMSE": 7.51,
+        "MAPE": 10.3
+      }
+    },
+    "FC-LSTM (Baseline)": {
+      "15min": {
+        "MAE": 3.44,
+        "RMSE": 6.3,
+        "MAPE": 9.6
+      },
+      "30min": {
+        "MAE": 3.77,
+        "RMSE": 7.23,
+        "MAPE": 10.9
+      },
+      "60min": {
+        "MAE": 4.37,
+        "RMSE": 8.69,
+        "MAPE": 13.2
+      }
+    }
+  }
+}

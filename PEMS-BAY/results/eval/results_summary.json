@@ -1,0 +1,42 @@
+{
+  "dataset": "PEMS-BAY",
+  "sensors": 325,
+  "standardized_metrics": {
+    "mae": 0.4392,
+    "rmse": 1.0327,
+    "r2_score": 0.8385,
+    "correlation": 0.9158,
+    "mean_aleatoric_uncertainty": 0.5508,
+    "mean_epistemic_uncertainty": 0.256,
+    "mean_total_uncertainty": 0.8068
+  },
+  "physical_speed_metrics_mph": {
+    "overall_mae": 1.67,
+    "overall_rmse": 3.72,
+    "overall_mape": 3.85
+  },
+  "horizon_specific_metrics_mph": {
+    "15min": {
+      "step": 3,
+      "mae": 1.3,
+      "rmse": 2.74
+    },
+    "30min": {
+      "step": 6,
+      "mae": 1.64,
+      "rmse": 3.7
+    },
+    "45min": {
+      "step": 9,
+      "mae": 1.88,
+      "rmse": 4.21
+    },
+    "60min": {
+      "step": 12,
+      "mae": 2.07,
+      "rmse": 4.74
+    }
+  },
+  "calibration_ece": 0.0869,
+  "timestamp": "20260918_013149"
+}

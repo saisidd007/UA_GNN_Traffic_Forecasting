@@ -1,0 +1,75 @@
+# Uncertainty-Aware Spatio-Temporal Graph Neural Network (UA-GNN)
+
+Comprehensive traffic speed forecasting framework with epistemic and aleatoric uncertainty quantification evaluated on **METR-LA** and **PEMS-BAY** benchmarks.
+
+---
+
+## 📁 Repository Organization
+
+The repository is organized into self-contained directories for each dataset, including raw and processed data, models, preprocessing notebooks, training scripts, evaluation pipelines, and generated artifacts matching the publication evaluation reports.
+
+```
+UA_GNN_Traffic_Forecasting/
+├── METR-LA/                  # Complete METR-LA pipeline (207 sensors)
+│   ├── configs/              # Dataset and training hyperparameters (metr_la.yaml)
+│   ├── data/                 # Raw traffic sensor readings and metadata
+│   ├── src/                  # Core model architecture and PyG data loaders
+│   ├── notebooks/            # Preprocessing, data exploration, and visualization notebooks
+│   ├── scripts/              # Ablation, robustness, calibration, and benchmark scripts
+│   ├── results/              # Evaluation metrics, figures, and metr-la_results.pdf
+│   └── README.md             # Detailed guide for METR-LA
+│
+├── PEMS-BAY/                 # Complete PEMS-BAY pipeline (325 sensors)
+│   ├── configs/              # Dataset and training hyperparameters (pems_bay.yaml)
+│   ├── data/                 # Raw traffic sensor readings, adjacency matrix, and metadata
+│   ├── src/                  # Memory-optimized UA-GNN model and lazy loaders
+│   ├── notebooks/            # Preprocessing, data exploration, and visualization notebooks
+│   ├── scripts/              # Ablation, robustness, calibration, and benchmark scripts
+│   ├── results/              # Evaluation metrics, figures, and pems-bay_results.pdf
+│   └── README.md             # Detailed guide for PEMS-BAY
+│
+└── requirements.txt          # Python dependencies
+```
+
+---
+
+## 📊 Summary of Benchmark Results
+
+| Metric | METR-LA (207 Sensors) | PEMS-BAY (325 Sensors) |
+| :--- | :---: | :---: |
+| **Normalized MAE** | `0.6099` | `0.4392` |
+| **Normalized RMSE** | `1.3172` | `1.0327` |
+| **$R^2$ Score** | `0.6620` | `0.8385` |
+| **Pearson Correlation** | `0.8137` | `0.9158` |
+| **Physical Speed MAE (mph)** | `3.4642` | `1.6700` |
+| **Physical Speed RMSE (mph)** | `6.5746` | `3.7200` |
+| **Overall MAPE (%)** | `9.65 %` | `3.85 %` |
+| **Mean Aleatoric Uncertainty** | `1.2662` | `0.5508` |
+| **Mean Epistemic Uncertainty** | `0.2774` | `0.2560` |
+| **Expected Calibration Error (ECE)** | `0.1614` | `0.0869` |
+| **Core Model Parameters** | `270,340` | `270,340` |
+| **Official PDF Report** | `METR-LA/results/metr-la_results.pdf` | `PEMS-BAY/results/pems-bay_results.pdf` |
+
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Running METR-LA
+```bash
+cd METR-LA
+python3 train_50_metrla.py       # Train 50 epochs on METR-LA
+python3 eval_metrla_results.py   # Run full test set evaluation
+```
+
+### 3. Running PEMS-BAY
+```bash
+cd PEMS-BAY
+python3 train_50.py              # Train 50 epochs on PEMS-BAY (Memory-optimized)
+python3 eval_pemsbay_results.py  # Run full test set evaluation
+python3 generate_final_results_pdf.py  # Generate the publication results PDF
+```

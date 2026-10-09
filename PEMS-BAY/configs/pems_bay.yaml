@@ -1,0 +1,37 @@
+# configs/pems_bay.yaml
+dataset:
+  name: pems-bay
+  data_dir: data/pems-bay/
+  num_nodes: 325
+  input_dim: 1
+  seq_len: 12
+  horizon: 12
+
+model:
+  hidden_dim: 64
+  num_st_blocks: 4
+  diffusion_steps: 2
+  num_attention_heads: 4
+  dilation_rates: [1, 2, 4, 8]
+  kernel_size: 2
+  bilstm_hidden: 64
+  dropout: 0.3
+  tod_embedding_dim: 32
+  dow_embedding_dim: 32
+
+training:
+  epochs: 50
+  batch_size: 64
+  learning_rate: 0.001
+  lr_patience: 10
+  loss: hybrid
+  lambda_anneal_epochs: 10
+
+uncertainty:
+  mc_samples: 10
+  dropout_active_at_inference: true
+
+output:
+  results_dir: results/pems-bay/
+  save_model: true
+  model_path: results/pems-bay/best_model.pt

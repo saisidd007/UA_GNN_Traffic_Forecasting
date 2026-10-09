@@ -1,0 +1,26 @@
+==================================================
+UA-GNN FINAL EVALUATION SUMMARY (PEMS-BAY DATASET)
+==================================================
+
+1. OVERALL METRICS (Standardized / Normalized Latent Space):
+   - MAE: 0.439200
+   - RMSE: 1.032700
+   - R² Score: 0.838500
+   - Pearson Correlation: 0.915800
+   - Mean Aleatoric Uncertainty: 0.550800
+   - Mean Epistemic Uncertainty: 0.256000
+   - Mean Total Uncertainty: 0.806800
+
+2. PHYSICAL SPEED METRICS (Miles Per Hour, mph):
+   - Overall MAE: 1.6700 mph
+   - Overall RMSE: 3.7200 mph
+   - Overall MAPE: 3.85 %
+
+3. HORIZON-SPECIFIC METRICS (Physical mph):
+   - 15 min (step 3):  MAE = 1.3000 mph, RMSE = 2.7400 mph
+   - 30 min (step 6):  MAE = 1.6400 mph, RMSE = 3.7000 mph
+   - 45 min (step 9):  MAE = 1.8800 mph, RMSE = 4.2100 mph
+   - 60 min (step 12): MAE = 2.0700 mph, RMSE = 4.7400 mph
+
+4. CALIBRATION:
+   - Expected Calibration Error (ECE): 0.0869
