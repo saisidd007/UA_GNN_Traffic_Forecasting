@@ -52,6 +52,15 @@ Independent rescoring matched all 1,996,583 targets and masks. Its MAE rose
 bootstrap gave [-0.006, 0.071] mph. This one-seed sampled pilot does not
 establish a reliable accuracy difference. Its calibration ECE is 0.088.
 
+The same corrected-loss interpretation on METR-LA scored **6.557 MAE / 11.624
+RMSE mph** over 512 sampled test windows (1,117,531 observed targets), seed
+42, best epoch 20 of 20. Its matched persistence baseline scored 4.221 / 8.137
+mph. Nominal 95% coverage was 95.52% with a 44.58 mph mean interval width;
+Gaussian CRPS was 5.067 mph and coverage ECE over 10–95% levels was 0.122.
+This also falls short of both persistence and the manuscript's claimed
+METR-LA accuracy. Its separate no-diffusion run is reported only once its
+matched evaluation completes.
+
 ## Full-test corrected small model, one seed
 
 These runs use seed 42, batch size 32, at most 50 epochs, 8,192 sampled train
