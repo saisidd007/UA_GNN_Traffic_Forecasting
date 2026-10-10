@@ -57,9 +57,20 @@ RMSE mph** over 512 sampled test windows (1,117,531 observed targets), seed
 42, best epoch 20 of 20. Its matched persistence baseline scored 4.221 / 8.137
 mph. Nominal 95% coverage was 95.52% with a 44.58 mph mean interval width;
 Gaussian CRPS was 5.067 mph and coverage ECE over 10–95% levels was 0.122.
-This also falls short of both persistence and the manuscript's claimed
-METR-LA accuracy. Its separate no-diffusion run is reported only once its
-matched evaluation completes.
+The separately trained no-diffusion run, best epoch 19 of 20, scored **6.992
+MAE / 12.204 RMSE mph**, normalized MAE 1.042, and Gaussian CRPS 5.359 mph.
+Independent rescoring verified identical test targets and masks. Removing
+diffusion increased MAE by 0.435 mph (6.63%); a descriptive 14-window block
+bootstrap gave [0.343, 0.522] mph. Both variants fall short of persistence
+and the manuscript's claimed METR-LA accuracy.
+
+**Unfinished trained ablations:** The PEMS-BAY no-aleatoric run was stopped
+after one epoch because the CPU pilot was taking nearly three minutes per
+epoch; it has no valid test score. METR-LA no-dropout and no-aleatoric training
+were not run. The implementation and repeat-run commands exist, but no
+conclusion about these trained ablations is claimed. Full 50-epoch, five-seed
+runs of all variants would require substantially more CPU time than this
+limited pilot and remain undone.
 
 ## Full-test corrected small model, one seed
 

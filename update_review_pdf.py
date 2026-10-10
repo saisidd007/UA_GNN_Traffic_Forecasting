@@ -240,8 +240,9 @@ def make_preface():
         ("5. Uncertainty/calibration — METRICS IMPLEMENTED; FULL ABLATIONS NOT DONE.",
          "Combined predictive variance, 50/80/90/95% coverage and widths, Gaussian CRPS, horizon checks, and reliability plots are implemented. "
          "The separately trained mean-only/no-aleatoric option is explicitly defined as MSE training with epistemic-only intervals; "
-         "the separately trained no-dropout option has zero MC variance. Any short runs of these variants are pilots, "
-         "and a full multi-seed uncertainty ablation remains outstanding. There is no demonstrated calibration guarantee."),
+         "the separately trained no-dropout option has zero MC variance. PEMS-BAY no-dropout has one short matched run; "
+         "PEMS-BAY no-aleatoric stopped after one epoch without a test score, and neither METR-LA uncertainty ablation was run. "
+         "A full multi-seed uncertainty ablation remains outstanding. There is no demonstrated calibration guarantee."),
         ("6. Graph/diffusion — GRAPH VERIFIED; MULTI-SEED ABLATION NOT DONE.",
          "Both source adjacencies are audited; directed one/two-hop unit tests pass. The four-block model includes forward and reverse diffusion. "
          "An adequately trained multi-seed no-diffusion ablation is still needed to assess the paper's extreme 23.617 claim."),
