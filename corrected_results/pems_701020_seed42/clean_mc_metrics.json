@@ -1,0 +1,16 @@
+{
+  "dataset": "PEMS-BAY",
+  "source_run": "corrected_results/pems_701020_seed42",
+  "sampled_test_windows": 64,
+  "mc_passes": 50,
+  "inference_seed": 42,
+  "observed_targets": 249600,
+  "mae_mph": 2.063739058983645,
+  "rmse_mph": 4.493430165381723,
+  "coverage_95": 0.973886217948718,
+  "width_95_mph": 14.59337824144207,
+  "epistemic_variance_mph2": 0.6628556163785262,
+  "aleatoric_variance_mph2": 29.46071146986949,
+  "persistence_mae_mph": 2.1299807694125215,
+  "persistence_rmse_mph": 4.995970228064748
+}

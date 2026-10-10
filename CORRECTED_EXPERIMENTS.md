@@ -30,12 +30,18 @@ preprocessing protocol; they are not a reproduction of the publication's numbers
   Gaussian interval coverage and width. Predictions and variances are saved in
   normalized units in `predictions.npz`; physical metrics use the train-fitted scale.
 
-PEMS-BAY uses its included adjacency file with a threshold of 0.1. The checkout
-does not contain the original METR-LA adjacency matrix, so METR-LA uses a
-geographic eight-nearest-neighbor proxy from the included sensor coordinates.
-This graph choice alone prevents direct comparison with published METR-LA scores.
+PEMS-BAY uses its included adjacency file with a threshold of 0.1. The original
+checkout lacked the METR-LA adjacency matrix, so the *earlier*
+`metr_la_seed42` run used a geographic eight-nearest-neighbor proxy. The
+official DCRNN METR-LA adjacency is now included and automatically used in
+new runs. Its provenance and hash are in `MANUSCRIPT_AUDIT.md`. The earlier
+metric remains an archival proxy-graph result and has not been relabelled.
 The METR-LA CSV and metadata sensor order, and the PEMS-BAY CSV and adjacency
 sensor order, are checked before training.
+
+The earlier results used 70/15/15. `--train-ratio .7 --val-ratio .1` selects
+the manuscript's 70/10/20 split. These are different test periods, so their
+scores should not be directly compared as a pure model or graph effect.
 
 ## Run
 
@@ -43,8 +49,8 @@ From the repository root with the installed Python environment:
 
 ```bash
 python -m unittest discover -s tests -v
-python corrected_experiment.py --dataset METR-LA --output corrected_results/my_metr_run --epochs 50
-python corrected_experiment.py --dataset PEMS-BAY --output corrected_results/my_pems_run --epochs 50
+python corrected_experiment.py --dataset METR-LA --output corrected_results/my_metr_run --epochs 50 --batch-size 32 --val-ratio .1
+python corrected_experiment.py --dataset PEMS-BAY --output corrected_results/my_pems_run --epochs 50 --batch-size 32 --val-ratio .1
 ```
 
 The output directory must be new, to avoid replacing any earlier result. Runs

@@ -1,0 +1,16 @@
+{
+  "reference_run": "paper_results/pems_limited_seed42",
+  "ablation_run": "paper_results/pems_limited_no_diffusion_seed42",
+  "matched_windows": 512,
+  "matched_observed_targets": 1996583,
+  "reference_mae_mph": 3.8807925034549853,
+  "ablation_mae_mph": 4.293380928955328,
+  "ablation_minus_reference_mae_mph": 0.41258842550034247,
+  "relative_mae_increase_pct": 10.631550775596077,
+  "block_windows": 14,
+  "bootstrap_resamples": 1000,
+  "descriptive_95ci_mph": [
+    0.3525966807124256,
+    0.4758293737212799
+  ]
+}

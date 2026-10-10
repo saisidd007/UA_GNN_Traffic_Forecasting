@@ -1,0 +1,71 @@
+{
+  "source_run": "paper_results/pems_limited_seed42",
+  "test_windows": 16,
+  "inference_seed": 42,
+  "rows": [
+    {
+      "dataset": "PEMS-BAY",
+      "source_run": "paper_results/pems_limited_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 5,
+      "inference_seed": 42,
+      "observed_targets": 62400,
+      "mae_mph": 3.810414099115396,
+      "rmse_mph": 7.510546092371166,
+      "coverage_95": 0.9612820512820512,
+      "width_95_mph": 22.533596867006036,
+      "epistemic_variance_mph2": 0.8677430560692324,
+      "aleatoric_variance_mph2": 57.566530332978665,
+      "persistence_mae_mph": 2.294967928679591,
+      "persistence_rmse_mph": 5.481028992435585
+    },
+    {
+      "dataset": "PEMS-BAY",
+      "source_run": "paper_results/pems_limited_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 10,
+      "inference_seed": 42,
+      "observed_targets": 62400,
+      "mae_mph": 3.8049648114281123,
+      "rmse_mph": 7.470935363994084,
+      "coverage_95": 0.961650641025641,
+      "width_95_mph": 22.563305786802015,
+      "epistemic_variance_mph2": 1.0293952619357898,
+      "aleatoric_variance_mph2": 57.57295420493794,
+      "persistence_mae_mph": 2.294967928679591,
+      "persistence_rmse_mph": 5.481028992435585
+    },
+    {
+      "dataset": "PEMS-BAY",
+      "source_run": "paper_results/pems_limited_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 30,
+      "inference_seed": 42,
+      "observed_targets": 62400,
+      "mae_mph": 3.8010746163196947,
+      "rmse_mph": 7.4554888028332345,
+      "coverage_95": 0.9613942307692308,
+      "width_95_mph": 22.562263865557018,
+      "epistemic_variance_mph2": 1.0848996859269293,
+      "aleatoric_variance_mph2": 57.50102261947942,
+      "persistence_mae_mph": 2.294967928679591,
+      "persistence_rmse_mph": 5.481028992435585
+    },
+    {
+      "dataset": "PEMS-BAY",
+      "source_run": "paper_results/pems_limited_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 50,
+      "inference_seed": 42,
+      "observed_targets": 62400,
+      "mae_mph": 3.801411235411999,
+      "rmse_mph": 7.4581959013648556,
+      "coverage_95": 0.961426282051282,
+      "width_95_mph": 22.564618962026923,
+      "epistemic_variance_mph2": 1.088910180003976,
+      "aleatoric_variance_mph2": 57.51439169281461,
+      "persistence_mae_mph": 2.294967928679591,
+      "persistence_rmse_mph": 5.481028992435585
+    }
+  ]
+}

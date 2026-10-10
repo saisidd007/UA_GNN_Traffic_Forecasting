@@ -1,0 +1,15 @@
+{
+  "dataset": "METR-LA",
+  "source_run": "corrected_results/metr_official_graph_701020_seed42",
+  "sampled_test_windows": 6844,
+  "mc_passes": 1,
+  "observed_targets": 14940228,
+  "mae_mph": 4.071412648961235,
+  "rmse_mph": 7.709471263162847,
+  "coverage_95": 0.965570538816409,
+  "width_95_mph": 32.46060710354555,
+  "epistemic_variance_mph2": 0.0,
+  "aleatoric_variance_mph2": 149.87546092880493,
+  "persistence_mae_mph": 4.242579344708178,
+  "persistence_rmse_mph": 8.190628215899627
+}

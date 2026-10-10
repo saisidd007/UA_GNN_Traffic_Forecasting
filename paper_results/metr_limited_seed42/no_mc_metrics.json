@@ -1,0 +1,16 @@
+{
+  "dataset": "METR-LA",
+  "source_run": "paper_results/metr_limited_seed42",
+  "sampled_test_windows": 512,
+  "mc_passes": 1,
+  "inference_seed": 42,
+  "observed_targets": 1117531,
+  "mae_mph": 6.478967809303656,
+  "rmse_mph": 12.56300580320565,
+  "coverage_95": 0.9624842621815413,
+  "width_95_mph": 44.71881301382986,
+  "epistemic_variance_mph2": 0.0,
+  "aleatoric_variance_mph2": 327.1385623544163,
+  "persistence_mae_mph": 4.2206810315671754,
+  "persistence_rmse_mph": 8.136889146625428
+}

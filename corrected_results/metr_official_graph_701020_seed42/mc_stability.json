@@ -1,0 +1,71 @@
+{
+  "source_run": "corrected_results/metr_official_graph_701020_seed42",
+  "test_windows": 64,
+  "inference_seed": 42,
+  "rows": [
+    {
+      "dataset": "METR-LA",
+      "source_run": "corrected_results/metr_official_graph_701020_seed42",
+      "sampled_test_windows": 64,
+      "mc_passes": 5,
+      "inference_seed": 42,
+      "observed_targets": 135938,
+      "mae_mph": 4.0199814531827265,
+      "rmse_mph": 7.6350334164684055,
+      "coverage_95": 0.9684635642719475,
+      "width_95_mph": 32.94325142110653,
+      "epistemic_variance_mph2": 1.107483885732745,
+      "aleatoric_variance_mph2": 153.85041672390327,
+      "persistence_mae_mph": 4.121010971449018,
+      "persistence_rmse_mph": 7.86753908690098
+    },
+    {
+      "dataset": "METR-LA",
+      "source_run": "corrected_results/metr_official_graph_701020_seed42",
+      "sampled_test_windows": 64,
+      "mc_passes": 10,
+      "inference_seed": 42,
+      "observed_targets": 135938,
+      "mae_mph": 4.008254882594589,
+      "rmse_mph": 7.602788602641056,
+      "coverage_95": 0.9687357471788609,
+      "width_95_mph": 32.994399116179885,
+      "epistemic_variance_mph2": 1.2870387110547614,
+      "aleatoric_variance_mph2": 154.06027366284403,
+      "persistence_mae_mph": 4.121010971449018,
+      "persistence_rmse_mph": 7.86753908690098
+    },
+    {
+      "dataset": "METR-LA",
+      "source_run": "corrected_results/metr_official_graph_701020_seed42",
+      "sampled_test_windows": 64,
+      "mc_passes": 30,
+      "inference_seed": 42,
+      "observed_targets": 135938,
+      "mae_mph": 4.004357920727942,
+      "rmse_mph": 7.607652040797607,
+      "coverage_95": 0.9687431034736423,
+      "width_95_mph": 33.00032077240696,
+      "epistemic_variance_mph2": 1.3886365040301947,
+      "aleatoric_variance_mph2": 153.99950804640187,
+      "persistence_mae_mph": 4.121010971449018,
+      "persistence_rmse_mph": 7.86753908690098
+    },
+    {
+      "dataset": "METR-LA",
+      "source_run": "corrected_results/metr_official_graph_701020_seed42",
+      "sampled_test_windows": 64,
+      "mc_passes": 50,
+      "inference_seed": 42,
+      "observed_targets": 135938,
+      "mae_mph": 4.002782736522813,
+      "rmse_mph": 7.606365066300637,
+      "coverage_95": 0.9688093101266754,
+      "width_95_mph": 33.00058725255559,
+      "epistemic_variance_mph2": 1.4219154620819914,
+      "aleatoric_variance_mph2": 153.99169797777017,
+      "persistence_mae_mph": 4.121010971449018,
+      "persistence_rmse_mph": 7.86753908690098
+    }
+  ]
+}

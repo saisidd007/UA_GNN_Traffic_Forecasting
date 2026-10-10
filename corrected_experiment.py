@@ -35,10 +35,18 @@ def load_data(name):
             raise ValueError("PEMS-BAY adjacency sensor order differs from CSV")
         adjacency = np.asarray(saved[2] if isinstance(saved, list) else saved)
     else:
-        # METR-LA ships without an adjacency matrix; derive an explicit geographic proxy.
         meta = pd.read_csv(folder / "METR-LA-META.csv")
         if meta["sensor_id"].astype(str).tolist() != sensor_ids:
             raise ValueError("METR-LA metadata sensor order differs from CSV")
+        official_graph = folder / "adj_mx.pkl"
+        if official_graph.exists():
+            with official_graph.open("rb") as stream:
+                saved = pickle.load(stream, encoding="latin1")
+            if saved[0] != sensor_ids:
+                raise ValueError("METR-LA adjacency sensor order differs from CSV")
+            adjacency = np.asarray(saved[2], dtype=np.float32)
+            return raw, timestamps, adjacency
+        # Explicit fallback for checkouts lacking the benchmark adjacency.
         coords = np.deg2rad(meta[["latitude", "longitude"]].to_numpy())
         lat, lon = coords[:, 0], coords[:, 1]
         delta_lat = lat[:, None] - lat[None, :]
@@ -137,11 +145,13 @@ def metrics(pred, target, epistemic, aleatoric, scale, target_observed):
     return result
 
 
-def persistence_baseline(name):
+def persistence_baseline(name, train_ratio=.7, val_ratio=.15, test_windows=None):
     """Repeat the last input reading across horizons on the same test windows."""
     raw, _, _ = load_data(name)
-    values, observed, _, scale, splits, _ = prepare(raw)
+    values, observed, _, scale, splits, _ = prepare(raw, train_ratio=train_ratio, val_ratio=val_ratio)
     starts = splits["test"]
+    if test_windows and test_windows < len(starts):
+        starts = starts[np.linspace(0, len(starts)-1, test_windows, dtype=int)]
     last = values[starts + 11]
     target = np.stack([values[starts + 12 + step] for step in range(12)], axis=1)
     mask = np.stack([observed[starts + 12 + step] for step in range(12)], axis=1)
@@ -160,13 +170,16 @@ def run(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     raw, timestamps, adjacency = load_data(args.dataset)
-    values, observed, center, scale, splits, boundaries = prepare(raw)
+    values, observed, center, scale, splits, boundaries = prepare(
+        raw, train_ratio=args.train_ratio, val_ratio=args.val_ratio)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=args.resume)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     graph = torch.tensor((adjacency > .1).astype(np.float32), device=device)
     graph.fill_diagonal_(1)
     graph /= graph.sum(1, keepdim=True).clamp_min(1)
+    if args.no_graph:
+        graph = torch.eye(graph.shape[0], device=device)
     model = TrafficModel().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -258,9 +271,12 @@ def run(args):
                    "epochs_completed": len(log), "max_epochs": args.epochs, "early_stopping_patience": args.patience,
                    "mc_passes": args.mc_passes, "best_epoch": best_epoch,
                    "batch_size": args.batch_size, "learning_rate": args.lr,
+                   "torch_threads": args.threads,
                    "windows": {key: int(min(len(item), getattr(args, key + "_windows") or len(item))) for key,item in splits.items()},
                    "split_timestamps": [timestamps[i] for i in boundaries], "graph_edges": int((graph > 0).sum()),
-                   "graph_note": "METR-LA geographic 8-nearest-neighbor proxy (no adjacency file in checkout)" if args.dataset == "METR-LA" else "PEMS-BAY supplied adjacency, threshold >0.1"})
+                   "graph_note": ("METR-LA official DCRNN adjacency, threshold >0.1" if (ROOT / "METR-LA/data/metr-la/adj_mx.pkl").exists() else "METR-LA geographic 8-nearest-neighbor proxy") if args.dataset == "METR-LA" else "PEMS-BAY supplied adjacency, threshold >0.1",
+                   "train_ratio": args.train_ratio, "val_ratio": args.val_ratio,
+                   "no_graph": args.no_graph})
     (output / "metrics.json").write_text(json.dumps(result, indent=2))
     (output / "training.json").write_text(json.dumps(log, indent=2))
     np.savez_compressed(output / "predictions.npz", mean=pred, target=target, epistemic=epi,
@@ -282,5 +298,8 @@ if __name__ == "__main__":
     parser.add_argument("--train-windows", type=int)
     parser.add_argument("--val-windows", type=int)
     parser.add_argument("--test-windows", type=int)
+    parser.add_argument("--train-ratio", type=float, default=.7)
+    parser.add_argument("--val-ratio", type=float, default=.15)
+    parser.add_argument("--no-graph", action="store_true", help="matched graph-aggregation ablation; this model has no diffusion")
     parser.add_argument("--resume", action="store_true", help="resume from the output directory's latest.pt")
     run(parser.parse_args())

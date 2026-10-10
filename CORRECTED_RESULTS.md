@@ -1,9 +1,12 @@
-# Audited experiment results (seed 42)
+# Archived 70/15/15 audited experiment results (seed 42)
+
+The newer 70/10/20 reruns, official METR-LA graph results, and manuscript
+pilot are documented in [MANUSCRIPT_RERUN_RESULTS.md](MANUSCRIPT_RERUN_RESULTS.md).
 
 These are new results from `corrected_experiment.py`, not replacements for the
 publication's numbers. Both runs used CPU, 50 epochs, batch size 32, 8,192
 freshly sampled training windows per epoch, full chronological validation and
-test splits, and 30 Monte Carlo dropout passes at the final test evaluation.
+test splits under 70/15/15, and 30 Monte Carlo dropout passes at the final test evaluation.
 The best checkpoint was selected by validation MSE only.
 
 | Dataset | Best epoch | Model MAE / RMSE (mph) | Persistence MAE / RMSE (mph) | 95% coverage | Mean 95% width (mph) |
@@ -31,11 +34,12 @@ archive exceeds GitHub's per-file size limit.
 - The corrected temporal model is a new implementation, not the exact old
   270,340-parameter architecture. Its scores cannot be attributed solely to
   a preprocessing or temporal-axis fix.
-- METR-LA has no adjacency file in this checkout. The new run uses a geographic
-  eight-nearest-neighbor proxy, so it is not directly comparable with the
-  reported METR-LA benchmark score.
+- At the time of this run the checkout had no METR-LA adjacency file. This
+  archived run used a geographic eight-nearest-neighbor proxy. The official
+  DCRNN graph is now included for later runs; this old score is unchanged.
 - Zero readings are treated as missing sentinels based on the observed file
   patterns. If the datasets contain genuine zero-speed observations, this
   convention needs a source-backed revision and another rerun.
-- No diffusion, uncertainty-head, or sensor-failure ablations were rerun.
-  Original paper tables and figures remain provisional.
+- These archived runs had no diffusion or sensor-failure reruns. New stress
+  tests and a limited paper-model diffusion pilot are documented in
+  `MANUSCRIPT_RERUN_RESULTS.md`. Original paper tables remain provisional.
