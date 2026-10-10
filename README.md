@@ -7,6 +7,9 @@ corrected protocol.
 The new single-seed test results and their limits are in
 [MANUSCRIPT_RERUN_RESULTS.md](MANUSCRIPT_RERUN_RESULTS.md). The prior 70/15/15
 results remain archived in [CORRECTED_RESULTS.md](CORRECTED_RESULTS.md).
+The earlier manuscript-style pilot in that rerun report is superseded because
+its training loss did not match the manuscript equation; current corrected
+pilot runs must use `paper_experiment.py` with the linear MSE-to-NLL schedule.
 The uploaded manuscript has a claim-by-claim review in
 [MANUSCRIPT_AUDIT.md](MANUSCRIPT_AUDIT.md). The separate architectural
 interpretation and its limits are documented in
@@ -14,7 +17,10 @@ interpretation and its limits are documented in
 Concrete edits needed before revising the paper are in
 [MANUSCRIPT_REQUIRED_EDITS.md](MANUSCRIPT_REQUIRED_EDITS.md).
 
-Comprehensive traffic speed forecasting framework with epistemic and aleatoric uncertainty quantification evaluated on **METR-LA** and **PEMS-BAY** benchmarks.
+This repository contains legacy UA-GNN experiments and separate audited
+reruns on **METR-LA** and **PEMS-BAY**. The audited small model and the
+manuscript-style interpretation are distinct architectures; the manuscript's
+headline scores have not been reproduced under the corrected protocol.
 
 ---
 
@@ -66,24 +72,33 @@ UA_GNN_Traffic_Forecasting/
 
 ---
 
-## 🚀 Quick Start
+## Audited experiment path
 
-### 1. Installation
+Run from the repository root. The commands below use a new output folder for
+each run and evaluate the held-out test set only after validation-based
+checkpoint selection. The four-block paper model is expensive on CPU.
+On a GPU machine, install the PyTorch build appropriate for that CUDA runtime
+instead of the CPU wheel shown below.
+
+### Installation
 ```bash
-pip install -r requirements.txt
+python -m venv .venv
+.venv/bin/python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
-### 2. Running METR-LA
+### Corrected small model
 ```bash
-cd METR-LA
-python3 train_50_metrla.py       # Train 50 epochs on METR-LA
-python3 eval_metrla_results.py   # Run full test set evaluation
+.venv/bin/python corrected_experiment.py --dataset METR-LA --output corrected_results/my_metr_run --val-ratio .1 --batch-size 32 --train-windows 8192 --mc-passes 10
+.venv/bin/python corrected_experiment.py --dataset PEMS-BAY --output corrected_results/my_pems_run --val-ratio .1 --batch-size 32 --train-windows 8192 --mc-passes 10
 ```
 
-### 3. Running PEMS-BAY
+### Manuscript architecture interpretation
 ```bash
-cd PEMS-BAY
-python3 train_50.py              # Train 50 epochs on PEMS-BAY (Memory-optimized)
-python3 eval_pemsbay_results.py  # Run full test set evaluation
-python3 generate_final_results_pdf.py  # Generate the publication results PDF
+.venv/bin/python paper_experiment.py --dataset PEMS-BAY --output paper_results/my_pems_run --batch-size 64 --train-windows 8192 --mc-passes 10
 ```
+
+Use `--no-diffusion`, `--no-dropout`, or `--no-aleatoric` with a **new** output
+folder for separately trained ablations. `run_repetitions.py` runs a frozen
+configuration across seeds. The older dataset-specific `train_50*.py` scripts
+are retained as archival code and do not implement the audited protocol.

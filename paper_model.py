@@ -1,7 +1,7 @@
 """A literal, auditable interpretation of the manuscript's UA-GNN block equations.
 
 This is a new implementation. The manuscript does not specify every engineering
-choice (attention residuals, exact variance loss weighting, masking schedule),
+choice (attention residuals, exact output-head layout, masking schedule),
 so this module must not be presented as a reproduction of its reported scores.
 """
 

@@ -28,11 +28,13 @@ orders one and two. Isolated rows stay zero. Attention uses self links. Unit
 tests verify these conventions on a hand-built directed graph.
 
 The manuscript does not uniquely define the attention residual and projection
-structure, embedding width, sensor-mask augmentation probability, training-loss
-annealing direction, or exact output-head layout. This implementation chooses
-8 dimensions for each clock embedding, a 10% full-history sensor mask in
-training, and a ramp from MSE to MSE+NLL across the first ten epochs. At 64
-hidden channels it has 222,480 learned parameters. The stated approximate
+structure, embedding width, sensor-mask augmentation probability, or exact
+output-head layout. This implementation chooses 8 dimensions for each clock
+embedding, a 10% full-history sensor mask in
+training, and the manuscript's linear replacement of MSE by Gaussian NLL
+across the first ten epochs. An earlier code version retained MSE at full
+weight throughout training; its saved architecture pilot results are superseded.
+At 64 hidden channels it has 222,480 learned parameters. The stated approximate
 304,000 parameter count cannot be reproduced without omitted architecture
 details or different layer choices.
 
@@ -40,7 +42,10 @@ details or different layer choices.
 PEMS-BAY adjacency, a 70/10/20 chronological split, causal missing-input fill,
 train-only scaling, validation-selected checkpoint, and one test evaluation.
 It records actual hardware and sampled-window limits. A matched no-diffusion
-switch is available via `--no-diffusion`; meaningful ablation claims require
+switch is available via `--no-diffusion`. Separately trained `--no-dropout`
+and `--no-aleatoric` configurations are also available. The latter trains on
+MSE and evaluates epistemic variance alone, so its uncertainty scores describe
+a different predictive distribution. Meaningful ablation claims require
 the same train/validation/test windows, seed, budget, and evaluation settings.
 `compare_ablation.py` enforces those saved-run fields, verifies identical
 targets and masks, and reports a paired physical-MAE difference with a
@@ -59,9 +64,25 @@ python mc_stability.py paper_results/pems_seed42 --windows 16
 python compare_ablation.py paper_results/pems_seed42 paper_results/pems_no_diffusion_seed42
 ```
 
+For a matched trained no-dropout check, rerun the same command with a new
+output directory and `--no-dropout`. For a mean-only/no-aleatoric check, use
+`--no-aleatoric`; that variant trains on MSE and its saved interval variance
+contains only the MC component. `run_repetitions.py --paper` accepts these
+switches for frozen five-seed runs and `--resume` continues interrupted runs
+from their saved latest checkpoints. Compare only runs with the same loss
+version, window samples, batch size, and seed.
+
 On a CPU the four-block graph-attention model is expensive. Short sampled runs
 are explicitly preliminary and cannot establish the manuscript's headline
 accuracy, robustness, or ablation claims.
+On this five-core host, a measured PEMS-BAY batch-64 epoch with 256 sampled
+train and 256 validation windows took about 90 seconds in a 20-epoch run.
+A 50-epoch full-window run is therefore expected to take tens of hours per
+seed; full five-seed experiments and trained ablations require a larger
+compute budget. This is an extrapolation, not a measured full-run duration.
+On this 33 GiB host, three simultaneous batch-64 paper-model processes
+exhausted available memory during startup; run the experiment matrix
+sequentially or measure resource use before adding parallel jobs.
 
 `robustness_experiment.py` evaluates clean, independent random observation
 dropout, a fixed set of failed sensors across the test sample, per-window

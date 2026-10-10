@@ -1,11 +1,56 @@
 # Rerun results after manuscript and correction-plan audit
 
+**Revision notice:** The manuscript-architecture pilot numbers below were
+produced before a loss-equation correction. That training code kept MSE at
+full weight while adding NLL after warm-up, whereas the manuscript replaces
+MSE with NLL over ten epochs. Those architecture pilots and their ablation,
+robustness, and uncertainty checks are archived observations, not current
+results for the corrected implementation. The corrected small-model results
+are unaffected because they use a separate training script.
+
 All numbers below were generated on the CPU in this cloud environment. MAE,
 RMSE, interval width, and CRPS use physical mph. A zero reading is treated as
 missing under the stated benchmark convention. The new chronological split is
 70/10/20 by complete forecast targets; preprocessing statistics come only
 from the training period. The test targets were evaluated after checkpoint
 selection on validation data.
+
+## Corrected-loss manuscript interpretation, PEMS-BAY CPU pilot
+
+The paper-style implementation now uses the manuscript's stated
+`lambda*MSE + (1-lambda)*NLL` loss, with lambda falling from 1 to 0 over ten
+epochs, a plateau learning-rate factor of 0.5, and the manuscript's batch
+size 64. Both runs below use seed 42, 256 sampled training windows per epoch,
+256 validation windows, 512 evenly spaced test windows, at most 20 epochs,
+and ten MC passes. The matched persistence baseline on those test windows is
+2.187 MAE / 5.184 RMSE mph. These runs are substantially under the paper's
+stated training budget and are not final benchmark estimates.
+
+| Model | MAE / RMSE (mph) | Normalized MAE | 95% coverage / width (mph) | Gaussian CRPS (mph) | Best epoch / epochs run |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Paper interpretation with diffusion | 4.063 / 7.592 | 1.004 | 94.35% / 20.81 | 3.088 | 16 / 20 |
+| Matched no-diffusion interpretation | 4.813 / 8.396 | 1.171 | 94.20% / 21.76 | 3.560 | 11 / 19 |
+| Separately trained no-dropout interpretation | 4.093 / 7.709 | 1.009 | 93.81% / 20.07 | 3.089 | 18 / 20 |
+
+Independent saved-prediction rescoring verified identical targets and masks
+across 1,996,583 observed targets. Removing diffusion raised MAE by 0.750
+mph (18.46%) in this one-seed pilot. A descriptive 1,000-resample bootstrap
+over 14-window blocks gave [0.650, 0.858] mph. The no-diffusion run stopped
+after 19 epochs under the same early-stopping rule; the diffusion run reached
+20. Both are worse than matched persistence, so this comparison does not
+establish a useful deployed model or validate the manuscript's extreme
+normalized-MAE ablation claim of 23.617. The new normalized MAEs use the
+explicit train-only per-sensor IQR scale, which the manuscript does not
+specify precisely enough for a numerical equivalence claim.
+The diffusion pilot's reliability curve lies above the nominal diagonal at
+most 10–95% levels (coverage ECE 0.105); its nominal 95% interval covers
+94.35% at a mean width of 20.81 mph. One near-nominal coverage point does
+not establish calibration across levels.
+The trained no-dropout variant has zero epistemic variance by construction.
+Independent rescoring matched all 1,996,583 targets and masks. Its MAE rose
+0.030 mph (0.74%) relative to the dropout run; a descriptive 14-window block
+bootstrap gave [-0.006, 0.071] mph. This one-seed sampled pilot does not
+establish a reliable accuracy difference. Its calibration ECE is 0.088.
 
 ## Full-test corrected small model, one seed
 
@@ -49,7 +94,7 @@ final model estimates. On the same 512 test windows, persistence MAE is
 4.221 mph for METR-LA and 2.187 mph for PEMS-BAY; these short-budget model
 means are worse than persistence.
 
-## Manuscript architecture interpretation, limited CPU pilot
+## Archived manuscript architecture interpretation, superseded CPU pilot
 
 The implemented model uses four dilated causal temporal blocks, weighted
 forward/reverse two-hop diffusion, four-head graph attention, a BiLSTM over

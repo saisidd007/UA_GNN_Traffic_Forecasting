@@ -3,6 +3,12 @@
 The submitted LaTeX manuscript is not part of this public repository. This
 file gives concrete replacement facts and identifies claims that should be
 removed or remeasured. `MANUSCRIPT_AUDIT.md` contains the supporting audit.
+The archived manuscript-style pilot in `MANUSCRIPT_RERUN_RESULTS.md` used an
+incorrect MSE-plus-NLL schedule and must not be used for revised claims.
+The corrected-loss PEMS-BAY pilot now scores 4.063 MAE / 7.592 RMSE mph on
+512 sampled test windows; its matched no-diffusion run scores 4.813 / 8.396.
+Both are one-seed, limited-training observations and remain unsuitable as
+the paper's headline benchmark numbers.
 
 ## Methods and dataset table
 

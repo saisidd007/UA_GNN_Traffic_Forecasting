@@ -12,8 +12,10 @@ from corrected_experiment import persistence_baseline
 
 
 def main(args):
+    if (args.no_diffusion or args.no_dropout or args.no_aleatoric) and not args.paper:
+        raise ValueError("Paper ablations require --paper")
     root = Path(args.output)
-    root.mkdir(parents=True, exist_ok=False)
+    root.mkdir(parents=True, exist_ok=args.resume)
     rows = []
     for seed in args.seeds:
         folder = root / f"seed_{seed}"
@@ -26,6 +28,10 @@ def main(args):
             command.extend(("--hidden", str(args.hidden)))
             if args.no_diffusion:
                 command.append("--no-diffusion")
+            if args.no_dropout:
+                command.append("--no-dropout")
+            if args.no_aleatoric:
+                command.append("--no-aleatoric")
         else:
             command.extend(("--val-ratio", ".1"))
             if args.no_graph:
@@ -34,9 +40,38 @@ def main(args):
             command.extend(("--val-windows", str(args.val_windows)))
         if args.test_windows:
             command.extend(("--test-windows", str(args.test_windows)))
-        subprocess.run(command, check=True)
-        rows.append(json.loads((folder / "metrics.json").read_text()))
+        if args.resume and (folder / "metrics.json").exists():
+            print(f"Using completed run {folder}", flush=True)
+        else:
+            if args.resume and folder.exists():
+                if not (folder / "latest.pt").exists():
+                    raise FileNotFoundError(f"Cannot resume {folder}: latest.pt is missing")
+                command.append("--resume")
+            subprocess.run(command, check=True)
+        completed = json.loads((folder / "metrics.json").read_text())
+        expected = {"dataset": args.dataset, "seed": seed,
+                    "batch_size": args.batch_size, "mc_passes": args.mc_passes,
+                    "max_epochs": args.epochs}
+        if args.paper:
+            expected.update(train_windows_per_epoch=args.train_windows,
+                            hidden=args.hidden, no_diffusion=args.no_diffusion,
+                            no_dropout=args.no_dropout, no_aleatoric=args.no_aleatoric)
+            if args.val_windows is not None:
+                expected["val_windows"] = args.val_windows
+            if args.test_windows is not None:
+                expected["test_windows"] = args.test_windows
+        elif completed.get("windows", {}).get("train") != args.train_windows or completed.get("no_graph") != args.no_graph:
+            raise ValueError(f"{folder}: small-model training configuration differs")
+        elif (args.val_windows is not None and completed["windows"]["val"] != args.val_windows) or (
+                args.test_windows is not None and completed["windows"]["test"] != args.test_windows):
+            raise ValueError(f"{folder}: small-model evaluation window sample differs")
+        for key, value in expected.items():
+            if completed.get(key) != value:
+                raise ValueError(f"{folder}: {key}={completed.get(key)!r}, expected {value!r}")
+        rows.append(completed)
     summary = {"dataset": args.dataset, "paper_interpretation": args.paper,
+               "no_diffusion": args.no_diffusion, "no_dropout": args.no_dropout,
+               "no_aleatoric": args.no_aleatoric,
                "seeds": args.seeds, "training_windows_per_epoch": args.train_windows,
                "validation_windows": args.val_windows,
                "test_windows": args.test_windows,
@@ -65,7 +100,10 @@ if __name__ == "__main__":
     parser.add_argument("--seeds", nargs="+", type=int, default=[7, 17, 29, 42, 71])
     parser.add_argument("--paper", action="store_true")
     parser.add_argument("--no-diffusion", action="store_true")
+    parser.add_argument("--no-dropout", action="store_true")
+    parser.add_argument("--no-aleatoric", action="store_true")
     parser.add_argument("--no-graph", action="store_true")
+    parser.add_argument("--resume", action="store_true")
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--train-windows", type=int, default=8192)
     parser.add_argument("--val-windows", type=int)

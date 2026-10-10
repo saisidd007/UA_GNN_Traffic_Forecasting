@@ -15,6 +15,16 @@ from corrected_experiment import load_data, metrics, persistence_baseline, prepa
 from paper_model import PaperUAGNN, enable_mc_dropout, graph_edges, transitions
 
 
+def manuscript_loss(mean, variance, target, observed, epoch, no_aleatoric=False):
+    """Eq. (total loss): linearly replace MSE with Gaussian NLL in 10 epochs."""
+    squared = (mean - target).square()
+    if no_aleatoric:
+        return squared[observed].mean()
+    weight_mse = max(0.0, 1.0 - epoch / 10.0)
+    nll = 0.5 * (variance.log() + squared / variance)
+    return (weight_mse * squared + (1.0 - weight_mse) * nll)[observed].mean()
+
+
 def run(args):
     torch.set_num_threads(args.threads)
     random.seed(args.seed)
@@ -31,11 +41,13 @@ def run(args):
     graph = torch.tensor(np.where(adjacency > .1, adjacency, 0), dtype=torch.float32, device=device)
     forward, reverse = transitions(graph)
     edges = graph_edges(graph)
-    model = PaperUAGNN(hidden=args.hidden, use_diffusion=not args.no_diffusion).to(device)
+    model = PaperUAGNN(hidden=args.hidden, dropout=0.0 if args.no_dropout else .3,
+                       use_diffusion=not args.no_diffusion).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=.5, patience=10)
     parameter_count = sum(p.numel() for name, p in model.named_parameters()
-                          if not args.no_diffusion or not name.startswith("diffusion."))
+                          if (not args.no_diffusion or not name.startswith("diffusion."))
+                          and (not args.no_aleatoric or not name.startswith("variance.")))
 
     def batches(split, limit, shuffle):
         indices = splits[split].copy()
@@ -71,20 +83,21 @@ def run(args):
         model.train()
         losses = []
         for x, mask, y, target_mask, p, d in batches("train", args.train_windows, True):
+            if not target_mask.any():
+                continue
             # Randomly mask whole sensors for the full historical window.
             dropped = torch.rand(x.shape[0], 1, x.shape[2], device=device) < .1
             augmented_mask = mask & ~dropped
             augmented = x.masked_fill(dropped, 0)
             optimizer.zero_grad()
             mean, variance = model(augmented, augmented_mask, p, d, forward, reverse, edges)
-            squared = (mean-y).square()
-            nll = .5 * (variance.log() + squared/variance)
-            anneal = max(0., 1. - epoch / 10.)
-            loss = (squared + (1.-anneal)*nll)[target_mask].mean()
+            loss = manuscript_loss(mean, variance, y, target_mask, epoch, args.no_aleatoric)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
             optimizer.step()
             losses.append(float(loss.item()))
+        if not losses:
+            raise ValueError("Training sample contains no observed targets")
         model.eval()
         error_sum, count = 0., 0
         with torch.no_grad():
@@ -92,6 +105,8 @@ def run(args):
                 mean, _ = model(x, mask, p, d, forward, reverse, edges)
                 error_sum += (mean-y).square()[target_mask].sum().item()
                 count += int(target_mask.sum())
+        if not count:
+            raise ValueError("Validation split contains no observed targets")
         score = error_sum/count
         scheduler.step(score)
         row = {"epoch": epoch+1, "train_loss": float(np.mean(losses)), "val_mse": score,
@@ -120,12 +135,17 @@ def run(args):
     for x, mask, y, target_mask, p, d in batches("test", args.test_windows, False):
         enable_mc_dropout(model)
         with torch.no_grad():
-            samples = [model(x, mask, p, d, forward, reverse, edges) for _ in range(args.mc_passes)]
+            # A model trained with zero dropout is deterministic in eval mode.
+            # Repeating the same forward pass cannot add epistemic variance.
+            effective_passes = 1 if args.no_dropout else args.mc_passes
+            samples = [model(x, mask, p, d, forward, reverse, edges)
+                       for _ in range(effective_passes)]
         means = torch.stack([sample[0] for sample in samples])
         variances = torch.stack([sample[1] for sample in samples])
         predictions.append(means.mean(0).cpu().numpy())
         epis.append(means.var(0, unbiased=False).cpu().numpy())
-        aleas.append(variances.mean(0).cpu().numpy())
+        aleas.append((torch.zeros_like(variances[0]) if args.no_aleatoric else
+                      variances.mean(0)).cpu().numpy())
         targets.append(y.cpu().numpy())
         masks.append(target_mask.cpu().numpy())
     pred, target, epi, alea, target_mask = [np.concatenate(items) for items in
@@ -133,16 +153,21 @@ def run(args):
     result = metrics(pred, target, epi, alea, scale[None, :, None], target_mask)
     result.update(dataset=args.dataset, seed=args.seed, architecture="paper_interpretation_v1",
                   parameters=parameter_count, hidden=args.hidden, no_diffusion=args.no_diffusion,
+                  no_dropout=args.no_dropout, no_aleatoric=args.no_aleatoric,
                   device=str(device), torch_threads=args.threads,
                   epochs_completed=len(log), max_epochs=args.epochs,
                   early_stopping_patience=args.patience, best_epoch=best_epoch,
                   batch_size=args.batch_size, learning_rate=.001,
                   train_sensor_mask_rate=.1, loss_nll_ramp_epochs=10,
+                  training_loss=("mse_only_no_aleatoric_v2" if args.no_aleatoric else
+                                 "linear_mse_to_nll_v2"),
+                  scheduler_factor=.5,
                   graph_threshold=.1,
                   train_windows_per_epoch=args.train_windows,
                   val_windows=int(min(len(splits["val"]), args.val_windows or len(splits["val"]))),
                   test_windows=int(min(len(splits["test"]), args.test_windows or len(splits["test"]))),
                   mc_passes=args.mc_passes,
+                  effective_mc_passes=1 if args.no_dropout else args.mc_passes,
                   train_ratio=.7, val_ratio=.1,
                   split="70/10/20", split_timestamps=[timestamps[i] for i in boundaries],
                   graph_edges_without_self_loops=int((graph>0).sum()-int((graph.diag()>0).sum())))
@@ -170,5 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-windows", type=int)
     parser.add_argument("--mc-passes", type=int, default=10)
     parser.add_argument("--no-diffusion", action="store_true")
+    parser.add_argument("--no-dropout", action="store_true")
+    parser.add_argument("--no-aleatoric", action="store_true")
     parser.add_argument("--resume", action="store_true")
     run(parser.parse_args())

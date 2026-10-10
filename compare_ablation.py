@@ -13,8 +13,17 @@ def compare(reference, ablation, block_windows=14, resamples=1000):
     reference, ablation = Path(reference), Path(ablation)
     first = json.loads((reference / "metrics.json").read_text())
     second = json.loads((ablation / "metrics.json").read_text())
+    losses = (first.get("training_loss"), second.get("training_loss"))
+    valid_losses = (losses[0] == losses[1] and losses[0] in
+                    ("linear_mse_to_nll_v2", "mse_only_no_aleatoric_v2"))
+    if losses == ("linear_mse_to_nll_v2", "mse_only_no_aleatoric_v2") and second.get("no_aleatoric"):
+        valid_losses = True
+    if not valid_losses:
+        raise ValueError("Runs have incompatible or undeclared training-loss versions")
     for key in ("dataset", "seed", "split", "test_windows", "train_windows_per_epoch",
-                "val_windows", "mc_passes", "epochs_completed"):
+                "val_windows", "mc_passes", "batch_size", "hidden", "max_epochs",
+                "early_stopping_patience", "scheduler_factor", "train_sensor_mask_rate",
+                "loss_nll_ramp_epochs", "graph_threshold"):
         if first[key] != second[key]:
             raise ValueError(f"Unmatched experiment field {key}")
     with np.load(reference / "predictions.npz") as saved:
@@ -40,6 +49,9 @@ def compare(reference, ablation, block_windows=14, resamples=1000):
                    count_blocks[draws].sum(1))
     ref_mae, abl_mae = per_ref.sum()/counts.sum(), per_abl.sum()/counts.sum()
     result = {"reference_run": str(reference), "ablation_run": str(ablation),
+              "reference_training_loss": losses[0], "ablation_training_loss": losses[1],
+              "reference_epochs_completed": first["epochs_completed"],
+              "ablation_epochs_completed": second["epochs_completed"],
               "matched_windows": len(counts), "matched_observed_targets": int(counts.sum()),
               "reference_mae_mph": float(ref_mae), "ablation_mae_mph": float(abl_mae),
               "ablation_minus_reference_mae_mph": float(abl_mae-ref_mae),

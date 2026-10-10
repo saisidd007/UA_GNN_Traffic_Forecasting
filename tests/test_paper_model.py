@@ -3,6 +3,7 @@ import unittest
 import torch
 
 from paper_model import PaperUAGNN, enable_mc_dropout, graph_edges, transitions
+from paper_experiment import manuscript_loss
 
 
 class PaperModelTests(unittest.TestCase):
@@ -35,6 +36,36 @@ class PaperModelTests(unittest.TestCase):
         self.assertFalse(model.training)
         self.assertFalse(model.temporal[0].norm.training)
         self.assertTrue(model.temporal[0].dropout.training)
+
+    def test_loss_warmup_replaces_mse_with_nll(self):
+        mean = torch.tensor([0., 1.])
+        variance = torch.tensor([4., 4.])
+        target = torch.tensor([2., 0.])
+        observed = torch.tensor([True, False])
+        self.assertAlmostEqual(manuscript_loss(mean, variance, target, observed, 0).item(), 4.)
+        expected_nll = .5 * (torch.log(variance[0]) + 1.)
+        self.assertAlmostEqual(manuscript_loss(mean, variance, target, observed, 10).item(),
+                               expected_nll.item())
+        midpoint = manuscript_loss(mean, variance, target, observed, 5)
+        self.assertAlmostEqual(midpoint.item(), (4. + expected_nll.item()) / 2)
+        self.assertAlmostEqual(manuscript_loss(mean, variance, target, observed, 10,
+                                               no_aleatoric=True).item(), 4.)
+
+    def test_no_dropout_model_is_deterministic_in_mc_mode(self):
+        torch.set_num_threads(1)
+        model = PaperUAGNN(hidden=16, dropout=0.0)
+        graph = torch.tensor([[0., 1.], [1., 0.]])
+        forward, reverse = transitions(graph)
+        values = torch.randn(2, 12, 2)
+        mask = torch.ones_like(values, dtype=torch.bool)
+        context = torch.zeros(2, 12, dtype=torch.long)
+        enable_mc_dropout(model)
+        with torch.no_grad():
+            first = model(values, mask, context, context, forward, reverse,
+                          graph_edges(graph))[0]
+            second = model(values, mask, context, context, forward, reverse,
+                           graph_edges(graph))[0]
+        self.assertTrue(torch.equal(first, second))
 
 
 if __name__ == "__main__":

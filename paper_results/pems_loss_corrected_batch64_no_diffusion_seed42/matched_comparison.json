@@ -1,0 +1,20 @@
+{
+  "reference_run": "paper_results/pems_loss_corrected_batch64_seed42",
+  "ablation_run": "paper_results/pems_loss_corrected_batch64_no_diffusion_seed42",
+  "reference_training_loss": "linear_mse_to_nll_v2",
+  "ablation_training_loss": "linear_mse_to_nll_v2",
+  "reference_epochs_completed": 20,
+  "ablation_epochs_completed": 19,
+  "matched_windows": 512,
+  "matched_observed_targets": 1996583,
+  "reference_mae_mph": 4.063208543171629,
+  "ablation_mae_mph": 4.813282690238665,
+  "ablation_minus_reference_mae_mph": 0.7500741470670365,
+  "relative_mae_increase_pct": 18.460143974829045,
+  "block_windows": 14,
+  "bootstrap_resamples": 1000,
+  "descriptive_95ci_mph": [
+    0.650133958560356,
+    0.8578554510112277
+  ]
+}

@@ -2,8 +2,9 @@
 
 import io
 import json
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
@@ -30,8 +31,8 @@ def make_preface():
     normal = styles["BodyText"]
     normal.leading = 13
     small = styles["Normal"]
-    small.fontSize = 8.4
-    small.leading = 11
+    small.fontSize = 9.2
+    small.leading = 12.6
     title = styles["Title"]
     heading = styles["Heading2"]
     story = []
@@ -41,7 +42,8 @@ def make_preface():
         story.append(Spacer(1, 7))
 
     p("UA-GNN correction plan: updated implementation status", title)
-    p(f"Review date: {date.today().isoformat()}. Repository: saisidd007/UA_GNN_Traffic_Forecasting. "
+    p(f"Review date: {datetime.now(ZoneInfo('Asia/Kolkata')).date().isoformat()}. "
+      "Repository: saisidd007/UA_GNN_Traffic_Forecasting. "
       "This status preface supersedes the older status pages; the supplied plan follows unchanged.")
     p("The uploaded LaTeX manuscript was checked against repository code and raw benchmark data. "
       "The current corrected small model and the separate manuscript interpretation are new code paths. "
@@ -102,6 +104,54 @@ def make_preface():
             p(f"{label} MC stability on {data['test_windows']} fixed windows: "
               f"10 vs 50 passes gave MAE {ten['mae_mph']:.3f} vs {fifty['mae_mph']:.3f} mph, "
               f"95% coverage {100*ten['coverage_95']:.2f}% vs {100*fifty['coverage_95']:.2f}%.", small)
+    corrected_folder = ROOT / "paper_results/pems_loss_corrected_batch64_seed42"
+    corrected_pilot = corrected_folder / "metrics.json"
+    if corrected_pilot.exists():
+        result = json.loads(corrected_pilot.read_text())
+        p("Corrected-loss manuscript-style CPU pilot (preliminary)", heading)
+        p(f"PEMS-BAY, seed {result['seed']}, batch {result['batch_size']}, "
+          f"{result['train_windows_per_epoch']} sampled train windows per epoch, "
+          f"{result['test_windows']} sampled test windows, best epoch {result['best_epoch']}: "
+          f"MAE {result['mae_mph']:.3f} mph, RMSE {result['rmse_mph']:.3f} mph, "
+          f"95% coverage {100*result['coverage_95']:.1f}%. "
+          "This pilot remains training-budget limited and does not establish the paper's headline scores.", small)
+        no_diff_folder = ROOT / "paper_results/pems_loss_corrected_batch64_no_diffusion_seed42"
+        no_diff_file = no_diff_folder / "metrics.json"
+        comparison_file = no_diff_folder / "matched_comparison.json"
+        if no_diff_file.exists():
+            ablation = json.loads(no_diff_file.read_text())
+            p(f"Matched no-diffusion PEMS-BAY pilot: MAE {ablation['mae_mph']:.3f} mph, "
+              f"RMSE {ablation['rmse_mph']:.3f} mph, 95% coverage "
+              f"{100*ablation['coverage_95']:.1f}%, best epoch {ablation['best_epoch']}.", small)
+        if comparison_file.exists():
+            comparison = json.loads(comparison_file.read_text())
+            low, high = comparison["descriptive_95ci_mph"]
+            p(f"Independent saved-prediction comparison: no diffusion increased MAE by "
+              f"{comparison['ablation_minus_reference_mae_mph']:.3f} mph "
+              f"({comparison['relative_mae_increase_pct']:.1f}%); descriptive block-bootstrap "
+              f"95% interval [{low:.3f}, {high:.3f}] mph. This is a one-seed sampled-window pilot.", small)
+    for folder, label in (
+            ("paper_results/pems_loss_corrected_batch64_no_dropout_seed42", "PEMS-BAY, trained no-dropout"),
+            ("paper_results/pems_loss_corrected_batch64_no_aleatoric_seed42", "PEMS-BAY, trained no-aleatoric"),
+            ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA, paper interpretation"),
+            ("paper_results/metr_loss_corrected_batch64_no_diffusion_seed42", "METR-LA, no diffusion"),
+            ("paper_results/metr_loss_corrected_batch64_no_dropout_seed42", "METR-LA, trained no-dropout"),
+            ("paper_results/metr_loss_corrected_batch64_no_aleatoric_seed42", "METR-LA, trained no-aleatoric")):
+        file = ROOT / folder / "metrics.json"
+        if file.exists():
+            result = json.loads(file.read_text())
+            p(f"{label} CPU pilot: MAE {result['mae_mph']:.3f} mph, "
+              f"RMSE {result['rmse_mph']:.3f} mph, "
+              f"{result['test_windows']} sampled test windows, "
+              f"best epoch {result['best_epoch']}/{result['epochs_completed']}. "
+              "This is not a full-budget benchmark.", small)
+            paired_file = file.with_name("matched_comparison.json")
+            if paired_file.exists():
+                paired = json.loads(paired_file.read_text())
+                p(f"Paired difference versus the matching paper-model pilot: "
+                  f"{paired['ablation_minus_reference_mae_mph']:+.3f} mph "
+                  f"({paired['relative_mae_increase_pct']:+.1f}%) on "
+                  f"{paired['matched_windows']} identical test windows.", small)
     pilots = []
     for folder, label in (("paper_results/pems_limited_seed42", "PEMS-BAY manuscript interpretation"),
                           ("paper_results/pems_limited_no_diffusion_seed42", "PEMS-BAY without diffusion"),
@@ -119,14 +169,17 @@ def make_preface():
                           f"{result['train_windows_per_epoch']} train windows/epoch, "
                           f"{result['test_windows']} sampled test windows, best epoch {result['best_epoch']}.")
     if pilots:
-        p("Limited-budget architecture pilots (preliminary)", heading)
+        p("Archived architecture pilots (superseded)", heading)
+        p("These pilots used an incorrect loss mixture that retained MSE at full weight "
+          "after warm-up. They are retained for provenance only and are not current "
+          "results for the manuscript interpretation.", small)
         for item in pilots:
             p(item, small)
     comparison_file = ROOT / "paper_results/pems_limited_no_diffusion_seed42/matched_comparison.json"
     if comparison_file.exists():
         comparison = json.loads(comparison_file.read_text())
         low, high = comparison["descriptive_95ci_mph"]
-        p(f"Matched PEMS-BAY pilot ablation: removing diffusion increased MAE by "
+        p(f"Archived PEMS-BAY pilot ablation, superseded by the corrected loss: removing diffusion increased MAE by "
           f"{comparison['ablation_minus_reference_mae_mph']:.3f} mph "
           f"({comparison['relative_mae_increase_pct']:.1f}%). "
           f"A descriptive 14-window block bootstrap gives [{low:.3f}, {high:.3f}] mph. "
@@ -177,28 +230,29 @@ def make_preface():
         ("1. Data preprocessing — DONE in new paths; original loaders retained.",
          "Chronological complete-target splits, causal forward fill, train-only median/IQR fit, zero-target masking. "
          "70/10/20 boundaries and missing counts are in MANUSCRIPT_AUDIT.md. Zero-as-missing is a documented benchmark convention, not proof for every reading."),
-        ("2. Temporal architecture — PARTIAL.",
+        ("2. Temporal architecture — INTERPRETATION IMPLEMENTED; EXACT REPRODUCTION UNRESOLVED.",
          "The corrected small model and separate four-block paper interpretation use the correct time and node axes. "
          "Unit tests and shape table pass. The paper omits layer details: the interpretation has 222,480 parameters, not its claimed approximately 304K."),
         ("3. Validation/test separation — DONE in new paths.",
          "Validation selects the best checkpoint; final test evaluation occurs after training. Legacy scripts remain historical artifacts."),
         ("4. MC dropout and normalization — DONE in new paths.",
          "Only Dropout modules are activated at inference; BatchNorm remains in evaluation mode in the paper interpretation."),
-        ("5. Uncertainty/calibration — PARTIAL.",
+        ("5. Uncertainty/calibration — METRICS IMPLEMENTED; FULL ABLATIONS NOT DONE.",
          "Combined predictive variance, 50/80/90/95% coverage and widths, Gaussian CRPS, horizon checks, and reliability plots are implemented. "
-         "No trained no-aleatoric-head ablation was run: removing its variance without a defined replacement distribution makes interval coverage/CRPS undefined. "
-         "The saved-variance component check and no-MC inference check are narrower tests. There is no demonstrated calibration guarantee."),
-        ("6. Graph/diffusion — PARTIAL.",
+         "The separately trained mean-only/no-aleatoric option is explicitly defined as MSE training with epistemic-only intervals; "
+         "the separately trained no-dropout option has zero MC variance. Any short runs of these variants are pilots, "
+         "and a full multi-seed uncertainty ablation remains outstanding. There is no demonstrated calibration guarantee."),
+        ("6. Graph/diffusion — GRAPH VERIFIED; MULTI-SEED ABLATION NOT DONE.",
          "Both source adjacencies are audited; directed one/two-hop unit tests pass. The four-block model includes forward and reverse diffusion. "
          "An adequately trained multi-seed no-diffusion ablation is still needed to assess the paper's extreme 23.617 claim."),
-        ("7. Core experiments — PARTIAL.",
+        ("7. Core experiments — SINGLE-SEED RUNS DONE; FINAL FIVE-SEED BENCHMARK NOT DONE.",
          "The corrected small model is rerun on both datasets. Reduced-budget five-seed runs are exploratory; five adequately trained seeds "
          "and a validated paper-architecture reproduction remain outstanding."),
-        ("8. Sensor failure — PARTIAL.",
+        ("8. Sensor failure — EVALUATOR DONE; FULL PAPER-MODEL EVIDENCE NOT DONE.",
          "Code supports matched random, persistent, clustered, and temporal-block failure at 10/20/30/40/50%, three corruption seeds, "
          "two causal input-fill strategies, a persistence reference, and MC interval diagnostics. "
          "Any measured robustness table must identify its model and test-window sample."),
-        ("9. Additional metrics — PARTIAL.",
+        ("9. Additional metrics — METRICS DONE; MATCHED LITERATURE BASELINES NOT DONE.",
          "CRPS, horizon scores, latency and memory measurement are implemented; matched broad baseline reproductions are not available."),
         ("10. Two-student division — NOT APPLICABLE.", "This is staffing advice, not a technical correction."),
         ("11. Paper consistency — NOT COMPLETE.",
@@ -217,8 +271,11 @@ def make_preface():
       "1,515-edge count; the claim that the softplus derivative stays bounded away from zero; treating literature baseline "
       "scores as matched experiments; asserting that a backward LSTM state sees forecast future; claiming calibration "
       "or anticipatory uncertainty widening without testing it.")
-    p("Unresolved: the manuscript does not fully specify embedding width, head topology, masking schedule, annealing "
-      "direction or exact model definition. Thus the 304K parameters and manuscript point scores cannot be reconstructed "
+    p("The paper-style implementation now follows the manuscript's MSE-to-NLL annealing equation and "
+      "uses a 0.5 learning-rate reduction. Earlier architecture pilot numbers are superseded. "
+      "Separately trained no-dropout and no-aleatoric configurations are available for matched reruns.")
+    p("Unresolved: the manuscript does not fully specify embedding width, head topology, masking schedule, "
+      "or exact model definition. Thus the 304K parameters and manuscript point scores cannot be reconstructed "
       "from its prose alone. The current cloud machine has no GPU; all new measured runs use CPU. Limited training "
       "windows or epochs must remain labelled exploratory.")
     p("The original five-page correction plan begins on the next page. Its instructions are proposals to assess, "
