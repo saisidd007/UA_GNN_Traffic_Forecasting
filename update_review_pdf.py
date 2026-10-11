@@ -6,9 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import reportlab
 from pypdf import PdfReader, PdfWriter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak
 
 
@@ -27,14 +30,22 @@ def row(folder, label):
 
 
 def make_preface():
+    font_dir = Path(reportlab.__file__).resolve().parent / "fonts"
+    pdfmetrics.registerFont(TTFont("ReviewSans", str(font_dir / "Vera.ttf")))
+    pdfmetrics.registerFont(TTFont("ReviewSans-Bold", str(font_dir / "VeraBd.ttf")))
+    pdfmetrics.registerFontFamily("ReviewSans", normal="ReviewSans", bold="ReviewSans-Bold")
     styles = getSampleStyleSheet()
     normal = styles["BodyText"]
+    normal.fontName = "ReviewSans"
     normal.leading = 13
     small = styles["Normal"]
+    small.fontName = "ReviewSans"
     small.fontSize = 9.2
     small.leading = 12.6
     title = styles["Title"]
+    title.fontName = "ReviewSans-Bold"
     heading = styles["Heading2"]
+    heading.fontName = "ReviewSans-Bold"
     story = []
 
     def p(text, style=normal):
@@ -55,6 +66,7 @@ def make_preface():
                   colWidths=[85, 133, 88, 68, 106])
     table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dde7ef")),
                                ("GRID", (0, 0), (-1, -1), .35, colors.grey),
+                               ("FONTNAME", (0, 0), (-1, -1), "ReviewSans"),
                                ("FONTSIZE", (0, 0), (-1, -1), 8),
                                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                                ("TOPPADDING", (0, 0), (-1, -1), 7),
@@ -62,7 +74,9 @@ def make_preface():
     story.append(table)
     story.append(Spacer(1, 12))
     for folder, label in (("corrected_results/metr_official_graph_701020_seed42", "METR-LA"),
-                          ("corrected_results/pems_701020_seed42", "PEMS-BAY")):
+                          ("corrected_results/pems_701020_seed42", "PEMS-BAY"),
+                          ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA corrected-loss pilot"),
+                          ("paper_results/pems_loss_corrected_batch64_seed42", "PEMS-BAY corrected-loss pilot")):
         metric_file = ROOT / folder / "metrics.json"
         baseline_file = ROOT / folder / "persistence_baseline.json"
         if metric_file.exists() and baseline_file.exists():
@@ -95,7 +109,9 @@ def make_preface():
               "All seeds selected the final epoch, so this undertrained variability check "
               "is not a final five-seed benchmark.", small)
     for folder, label in (("corrected_results/metr_official_graph_701020_seed42", "METR-LA"),
-                          ("corrected_results/pems_701020_seed42", "PEMS-BAY")):
+                          ("corrected_results/pems_701020_seed42", "PEMS-BAY"),
+                          ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA corrected-loss pilot"),
+                          ("paper_results/pems_loss_corrected_batch64_seed42", "PEMS-BAY corrected-loss pilot")):
         file = ROOT / folder / "mc_stability.json"
         if file.exists():
             data = json.loads(file.read_text())
@@ -187,6 +203,8 @@ def make_preface():
           "cannot validate the manuscript's 23.617 normalized-MAE claim.", small)
     for folder, label in (("corrected_results/metr_official_graph_701020_seed42", "METR-LA small model"),
                           ("corrected_results/pems_701020_seed42", "PEMS-BAY small model"),
+                          ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA corrected-loss paper pilot"),
+                          ("paper_results/pems_loss_corrected_batch64_seed42", "PEMS-BAY corrected-loss paper pilot"),
                           ("paper_results/pems_limited_seed42", "PEMS-BAY architecture pilot"),
                           ("paper_results/metr_limited_seed42", "METR-LA architecture pilot")):
         file = ROOT / folder / "no_mc_metrics.json"
@@ -198,6 +216,8 @@ def make_preface():
               f"{result['width_95_mph']:.2f} mph. This reuses the trained checkpoint.", small)
     for folder, label in (("corrected_results/metr_official_graph_701020_seed42", "METR-LA small model"),
                           ("corrected_results/pems_701020_seed42", "PEMS-BAY small model"),
+                          ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA corrected-loss paper pilot"),
+                          ("paper_results/pems_loss_corrected_batch64_seed42", "PEMS-BAY corrected-loss paper pilot"),
                           ("paper_results/pems_limited_seed42", "PEMS-BAY architecture pilot"),
                           ("paper_results/pems_limited_no_diffusion_seed42", "PEMS-BAY no-diffusion pilot"),
                           ("paper_results/metr_limited_seed42", "METR-LA architecture pilot")):
@@ -210,6 +230,8 @@ def make_preface():
               f"({result['repetitions']} measured batches, {result['torch_threads']} thread).", small)
     for folder, label in (("corrected_results/metr_official_graph_701020_seed42", "METR-LA small model"),
                           ("corrected_results/pems_701020_seed42", "PEMS-BAY small model"),
+                          ("paper_results/metr_loss_corrected_batch64_seed42", "METR-LA corrected-loss paper pilot"),
+                          ("paper_results/pems_loss_corrected_batch64_seed42", "PEMS-BAY corrected-loss paper pilot"),
                           ("paper_results/pems_limited_seed42", "PEMS-BAY architecture pilot")):
         file = ROOT / folder / "robustness.json"
         if file.exists():
@@ -237,22 +259,22 @@ def make_preface():
          "Validation selects the best checkpoint; final test evaluation occurs after training. Legacy scripts remain historical artifacts."),
         ("4. MC dropout and normalization — DONE in new paths.",
          "Only Dropout modules are activated at inference; BatchNorm remains in evaluation mode in the paper interpretation."),
-        ("5. Uncertainty/calibration — METRICS IMPLEMENTED; FULL ABLATIONS NOT DONE.",
+        ("5. Uncertainty/calibration — METRICS AND SHORT ABLATIONS DONE; FULL EVIDENCE NOT DONE.",
          "Combined predictive variance, 50/80/90/95% coverage and widths, Gaussian CRPS, horizon checks, and reliability plots are implemented. "
          "The separately trained mean-only/no-aleatoric option is explicitly defined as MSE training with epistemic-only intervals; "
-         "the separately trained no-dropout option has zero MC variance. PEMS-BAY no-dropout has one short matched run; "
-         "PEMS-BAY no-aleatoric stopped after one epoch without a test score, and neither METR-LA uncertainty ablation was run. "
-         "A full multi-seed uncertainty ablation remains outstanding. There is no demonstrated calibration guarantee."),
+         "the separately trained no-dropout option has zero MC variance. Matched short runs cover both ablations on both datasets. "
+         "Removing aleatoric variance lowered point MAE but made nominal 95% coverage only 14.74% on METR-LA and 20.77% on PEMS-BAY. "
+         "Full multi-seed uncertainty ablations remain outstanding. There is no demonstrated calibration guarantee."),
         ("6. Graph/diffusion — GRAPH VERIFIED; MULTI-SEED ABLATION NOT DONE.",
          "Both source adjacencies are audited; directed one/two-hop unit tests pass. The four-block model includes forward and reverse diffusion. "
          "An adequately trained multi-seed no-diffusion ablation is still needed to assess the paper's extreme 23.617 claim."),
         ("7. Core experiments — SINGLE-SEED RUNS DONE; FINAL FIVE-SEED BENCHMARK NOT DONE.",
          "The corrected small model is rerun on both datasets. Reduced-budget five-seed runs are exploratory; five adequately trained seeds "
          "and a validated paper-architecture reproduction remain outstanding."),
-        ("8. Sensor failure — EVALUATOR DONE; FULL PAPER-MODEL EVIDENCE NOT DONE.",
-         "Code supports matched random, persistent, clustered, and temporal-block failure at 10/20/30/40/50%, three corruption seeds, "
-         "two causal input-fill strategies, a persistence reference, and MC interval diagnostics. "
-         "Any measured robustness table must identify its model and test-window sample."),
+        ("8. Sensor failure — EVALUATOR AND SMALL CHECKS DONE; FULL EVIDENCE NOT DONE.",
+         "Code supports random, persistent, clustered, and temporal-block failure, three corruption seeds, two causal "
+         "input-fill strategies, a persistence reference, and MC interval diagnostics. Both corrected-loss paper-model checkpoints "
+         "were checked at 10/30/50% on 16 windows; this tiny undertrained sample cannot establish full-model robustness."),
         ("9. Additional metrics — METRICS DONE; MATCHED LITERATURE BASELINES NOT DONE.",
          "CRPS, horizon scores, latency and memory measurement are implemented; matched broad baseline reproductions are not available."),
         ("10. Two-student division — NOT APPLICABLE.", "This is staffing advice, not a technical correction."),

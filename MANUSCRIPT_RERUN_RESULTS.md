@@ -31,6 +31,7 @@ stated training budget and are not final benchmark estimates.
 | Paper interpretation with diffusion | 4.063 / 7.592 | 1.004 | 94.35% / 20.81 | 3.088 | 16 / 20 |
 | Matched no-diffusion interpretation | 4.813 / 8.396 | 1.171 | 94.20% / 21.76 | 3.560 | 11 / 19 |
 | Separately trained no-dropout interpretation | 4.093 / 7.709 | 1.009 | 93.81% / 20.07 | 3.089 | 18 / 20 |
+| Separately trained no-aleatoric interpretation | 3.942 / 7.547 | 0.960 | 20.77% / 2.49 | 3.619 | 19 / 20 |
 
 Independent saved-prediction rescoring verified identical targets and masks
 across 1,996,583 observed targets. Removing diffusion raised MAE by 0.750
@@ -51,6 +52,13 @@ Independent rescoring matched all 1,996,583 targets and masks. Its MAE rose
 0.030 mph (0.74%) relative to the dropout run; a descriptive 14-window block
 bootstrap gave [-0.006, 0.071] mph. This one-seed sampled pilot does not
 establish a reliable accuracy difference. Its calibration ECE is 0.088.
+The separately trained no-aleatoric run matched all 1,996,583 test targets
+and masks. It lowered MAE by 0.121 mph (2.98%; descriptive 14-window block
+bootstrap [-0.172, -0.078] mph), while its epistemic-only nominal 95%
+interval covered only **20.77%** at 2.49 mph mean width. The reference
+covered 94.35% at 20.81 mph width. Its ECE rose from 0.105 to 0.439. This
+ablation uses MSE-only training, so its point-error difference combines the
+changed objective and removed variance component.
 
 The same corrected-loss interpretation on METR-LA scored **6.557 MAE / 11.624
 RMSE mph** over 512 sampled test windows (1,117,531 observed targets), seed
@@ -64,13 +72,58 @@ diffusion increased MAE by 0.435 mph (6.63%); a descriptive 14-window block
 bootstrap gave [0.343, 0.522] mph. Both variants fall short of persistence
 and the manuscript's claimed METR-LA accuracy.
 
-**Unfinished trained ablations:** The PEMS-BAY no-aleatoric run was stopped
-after one epoch because the CPU pilot was taking nearly three minutes per
-epoch; it has no valid test score. METR-LA no-dropout and no-aleatoric training
-were not run. The implementation and repeat-run commands exist, but no
-conclusion about these trained ablations is claimed. Full 50-epoch, five-seed
-runs of all variants would require substantially more CPU time than this
-limited pilot and remain undone.
+The separately trained METR-LA no-dropout pilot scored **6.721 MAE / 11.851
+RMSE mph**, best epoch 20 of 20, on the same 512 test windows. The saved
+targets and masks match all 1,117,531 observations. Relative to the
+corrected-loss reference, MAE rose 0.164 mph (2.50%); the descriptive
+14-window block-bootstrap interval was [0.097, 0.226] mph. Its epistemic
+variance is exactly zero by construction. This one-seed difference does not
+establish across-seed reliability.
+
+The separately trained METR-LA no-aleatoric pilot scored **6.211 MAE /
+11.525 RMSE mph**, best epoch 20 of 20, with all 1,117,531 targets and masks
+matched. Its MAE was 0.346 mph lower than the reference (descriptive
+14-window block-bootstrap interval [-0.454, -0.242] mph), but its epistemic-only
+nominal 95% interval covered **14.74%** of observed targets at just 3.31 mph
+mean width, versus 95.52% coverage and 44.58 mph width for the reference.
+Its calibration ECE was 0.465 versus 0.122 for the reference. This pilot
+illustrates that a lower point error does not repair severe undercoverage;
+the no-aleatoric variant also uses an MSE-only training objective.
+
+All three additional trained uncertainty ablation pilots now have matched
+one-seed test results. Full 50-epoch, five-seed runs of all variants would
+require substantially more CPU time than this limited pilot and remain undone.
+
+## Corrected-loss paper-model quick stress and MC checks
+
+Both corrected-loss reference checkpoints were checked on **16 fixed,
+evenly spaced test windows per dataset**. A 10-versus-50-pass comparison
+used the same dropout seed. METR-LA MAE changed from 7.303 to 7.292 mph and
+95% coverage from 94.97% to 94.99%; PEMS-BAY MAE changed from 3.902 to
+3.888 mph and coverage from 94.23% to 94.27%. Mean interval widths changed
+by less than 0.01 mph. These are small-sample MC stability checks, not new
+full-test estimates.
+
+The same checkpoints also received synthetic random, persistent, clustered,
+and contiguous-time failures at 10%, 30%, and 50%. Each condition used three
+corruption seeds, both train-median replacement and causal forward filling,
+and three MC passes. The table shows the train-median, 50% summaries. Rates
+refer to sensor-time entries for random failure, sensors for persistent and
+clustered failure, and history steps for temporal blocks; they are not
+directly equivalent across failure types. Exact rows and all rates are in
+the saved `robustness.json` files.
+
+| Dataset | Clean MAE / 95% coverage | Random 50% MAE / coverage | Persistent 50% | Clustered 50% | Temporal block 50% |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| METR-LA | 7.302 / 94.96% | 6.856 / 93.45% | 6.949 / 93.38% | 7.126 / 92.13% | 7.132 / 93.79% |
+| PEMS-BAY | 3.897 / 94.20% | 3.825 / 93.15% | 3.826 / 93.05% | 4.072 / 91.35% | 4.262 / 93.54% |
+
+These checks contain 34,056 observed METR-LA targets and 62,400 PEMS-BAY
+targets. With 50% clustered failure, mean interval widths *narrowed* from
+46.26 to 39.50 mph on METR-LA and 20.40 to 17.71 mph on PEMS-BAY. Some
+other corruptions lowered MAE despite lower coverage; this tiny selected
+sample and weak reference checkpoints do not establish robust forecasting.
+The plan's full trained, multi-seed robustness evidence remains outstanding.
 
 ## Full-test corrected small model, one seed
 
@@ -178,6 +231,13 @@ passes gives 3.805 versus 3.801 MAE and 96.17% versus 96.14% coverage.
 These differences are small relative to the pilot's large accuracy gap.
 
 ## CPU inference cost
+
+The corrected-loss reference checkpoints were measured with one forward
+pass, batch 16, one PyTorch thread, three warmups, and ten timed batches on
+this five-CPU host. Median batch time was 1,761 ms on METR-LA and 2,829 ms
+on PEMS-BAY; measured peak process RSS was 653 and 769 MiB. Other training
+jobs were active during these measurements, so these are local throughput
+observations rather than isolated hardware benchmarks.
 
 Single-pass batch-16 inference on this five-CPU host, with one PyTorch thread,
 gives median batch times of 39.7 ms for the 14,520-parameter METR-LA small

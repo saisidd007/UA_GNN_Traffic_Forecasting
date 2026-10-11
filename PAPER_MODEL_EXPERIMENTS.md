@@ -75,6 +75,11 @@ version, window samples, batch size, and seed.
 On a CPU the four-block graph-attention model is expensive. Short sampled runs
 are explicitly preliminary and cannot establish the manuscript's headline
 accuracy, robustness, or ablation claims.
+Matched one-seed, 20-epoch-cap pilots for diffusion, trained no-dropout, and
+trained no-aleatoric configurations are now saved for both datasets. Their
+paired scores, coverage, MC stability, and small sensor-failure checks are
+reported in `MANUSCRIPT_RERUN_RESULTS.md`; none replaces the full multi-seed
+benchmark.
 On this five-core host, a measured PEMS-BAY batch-64 epoch with 256 sampled
 train and 256 validation windows took about 90 seconds in a 20-epoch run.
 A 50-epoch full-window run is therefore expected to take tens of hours per

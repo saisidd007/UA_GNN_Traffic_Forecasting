@@ -1,0 +1,39 @@
+{
+  "source_run": "paper_results/metr_loss_corrected_batch64_seed42",
+  "test_windows": 16,
+  "inference_seed": 42,
+  "rows": [
+    {
+      "dataset": "METR-LA",
+      "source_run": "paper_results/metr_loss_corrected_batch64_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 10,
+      "inference_seed": 42,
+      "observed_targets": 34056,
+      "mae_mph": 7.302661427733748,
+      "rmse_mph": 12.7294858250313,
+      "coverage_95": 0.9497298567066009,
+      "width_95_mph": 46.368170432679364,
+      "epistemic_variance_mph2": 4.800734410592385,
+      "aleatoric_variance_mph2": 332.84506998320256,
+      "persistence_mae_mph": 4.35070540783489,
+      "persistence_rmse_mph": 8.39296958347909
+    },
+    {
+      "dataset": "METR-LA",
+      "source_run": "paper_results/metr_loss_corrected_batch64_seed42",
+      "sampled_test_windows": 16,
+      "mc_passes": 50,
+      "inference_seed": 42,
+      "observed_targets": 34056,
+      "mae_mph": 7.291979051929829,
+      "rmse_mph": 12.684300737369282,
+      "coverage_95": 0.9499354005167958,
+      "width_95_mph": 46.37284145670488,
+      "epistemic_variance_mph2": 5.076824395103639,
+      "aleatoric_variance_mph2": 332.3481202924079,
+      "persistence_mae_mph": 4.35070540783489,
+      "persistence_rmse_mph": 8.39296958347909
+    }
+  ]
+}
