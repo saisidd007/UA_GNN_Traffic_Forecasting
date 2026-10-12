@@ -5,6 +5,7 @@ import json
 import math
 import os
 import platform
+import sys
 import statistics
 import subprocess
 import time
@@ -80,12 +81,31 @@ def main():
     parser.add_argument('--batch-size', type=int, default=2)
     parser.add_argument('--repeats', type=int, default=2)
     parser.add_argument('--output', default='lab_hardware_report.json')
+    parser.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
+    parser.add_argument('--hardware-only', action='store_true', help='Report hardware without running model benchmarks')
     args = parser.parse_args()
     if args.batch_size < 1 or args.repeats < 1:
         parser.error('batch-size and repeats must be positive')
     hardware = available_cpus()
     hardware.update(platform=platform.platform(), torch_version=torch.__version__,
+                    python_executable=sys.executable, pytorch_cuda_version=torch.version.cuda,
                     cuda_available=torch.cuda.is_available())
+    try:
+        result = subprocess.run(['nvidia-smi'], capture_output=True, text=True, timeout=15)
+        hardware['nvidia_smi'] = result.stdout or result.stderr
+        hardware['nvidia_driver_detected'] = result.returncode == 0
+    except (OSError, subprocess.TimeoutExpired) as error:
+        hardware['nvidia_driver_detected'] = False
+        hardware['nvidia_smi'] = str(error)
+    if platform.system() == 'Windows':
+        try:
+            command = ('Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors | ConvertTo-Json; '
+                       'Get-CimInstance Win32_ComputerSystem | Select-Object TotalPhysicalMemory | ConvertTo-Json')
+            result = subprocess.run(['powershell', '-NoProfile', '-Command', command],
+                                    capture_output=True, text=True, timeout=20)
+            hardware['windows_cpu_and_ram'] = result.stdout
+        except (OSError, subprocess.TimeoutExpired) as error:
+            hardware['windows_cpu_and_ram'] = str(error)
     if torch.cuda.is_available():
         props = torch.cuda.get_device_properties(0)
         hardware.update(gpu_name=props.name, gpu_total_memory_mib=props.total_memory/2**20)
@@ -100,11 +120,19 @@ def main():
         pass
     maximum = hardware['usable_threads']
     candidates = sorted({n for n in [1, 2, 4, 8, 16, maximum] if n <= maximum})
-    devices = ['cuda'] if torch.cuda.is_available() else ['cpu']
+    devices = [('cuda' if torch.cuda.is_available() else 'cpu') if args.device == 'auto' else args.device]
     report = dict(hardware=hardware, thread_candidates=candidates, benchmarks=[],
                   note='Short synthetic-batch benchmark, not a full-epoch runtime estimate. Physical CPU cores differ from logical threads.')
     print(json.dumps(hardware, indent=2), flush=True)
     output = Path(args.output)
+    output.write_text(json.dumps(report, indent=2))
+    if args.hardware_only:
+        print(f'Hardware report saved to {output}. No benchmark started.', flush=True)
+        return
+    if args.device == 'cuda' and not torch.cuda.is_available():
+        raise SystemExit(f'Hardware report saved to {output}. GPU requested, but installed PyTorch cannot use CUDA. Install a CUDA-enabled PyTorch build in this Python environment.')
+    if hardware['nvidia_driver_detected'] and not torch.cuda.is_available():
+        print('WARNING: NVIDIA driver detected, but this PyTorch environment cannot use CUDA. Benchmark will use CPU; its recommendation is for CPU only.', flush=True)
     for device in devices:
         for threads in candidates:
             for dataset in ['METR-LA', 'PEMS-BAY']:

@@ -11,6 +11,7 @@ python_bin="${PYTHON_BIN:-.venv/bin/python}"
 output_root="${OUTPUT_ROOT:-paper_results/lab_full_50_seed42}"
 batch_size="${BATCH_SIZE:-64}"
 threads="${THREADS:-4}"
+device="${DEVICE:-auto}"
 mkdir -p "$output_root"
 
 for dataset in METR-LA PEMS-BAY; do
@@ -25,7 +26,7 @@ for dataset in METR-LA PEMS-BAY; do
   echo "Starting $dataset: seed=42, epochs=50, all windows, batch=$batch_size, threads=$threads"
   "$python_bin" -u paper_experiment.py --dataset "$dataset" \
     --output "$output" --seed 42 --epochs 50 --patience 50 \
-    --hidden 64 --batch-size "$batch_size" --threads "$threads" \
+    --hidden 64 --batch-size "$batch_size" --threads "$threads" --device "$device" \
     --train-windows 0 --mc-passes 10 --log-every 25 "${extra[@]}" \
     2>&1 | tee -a "$output_root/$dataset.log"
 done

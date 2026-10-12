@@ -26,6 +26,10 @@ def manuscript_loss(mean, variance, target, observed, epoch, no_aleatoric=False)
 
 
 def run(args):
+    requested_device = getattr(args, "device", "auto")
+    if requested_device == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("GPU requested but CUDA is unavailable to this Python environment. "
+                           f"Installed PyTorch: {torch.__version__}. Install a CUDA-enabled PyTorch build.")
     torch.set_num_threads(args.threads)
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -38,7 +42,7 @@ def run(args):
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=args.resume)
     configuration = {key: value for key, value in vars(args).items()
-                     if key not in {"output", "resume", "epochs", "patience", "log_every"}}
+                     if key not in {"output", "resume", "epochs", "patience", "log_every", "device"}}
     config_path = output / "run_config.json"
     if args.resume and config_path.exists():
         previous = json.loads(config_path.read_text())
@@ -46,7 +50,8 @@ def run(args):
         if changed:
             raise ValueError("Resume settings differ from saved run: " + ", ".join(changed))
     config_path.write_text(json.dumps(configuration, indent=2))
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(("cuda" if torch.cuda.is_available() else "cpu")
+                          if requested_device == "auto" else requested_device)
     def emit(event, **fields):
         record = dict(event=event, dataset=args.dataset, **fields)
         line = json.dumps(record)
@@ -56,6 +61,7 @@ def run(args):
 
     current_epoch = 0
     emit("startup", device=str(device), threads=args.threads, seed=args.seed,
+         gpu_name=torch.cuda.get_device_name(0) if device.type == "cuda" else None,
          max_epochs=args.epochs, batch_size=args.batch_size,
          available_windows={key: len(value) for key, value in splits.items()})
     graph = torch.tensor(np.where(adjacency > .1, adjacency, 0), dtype=torch.float32, device=device)
@@ -243,6 +249,7 @@ if __name__ == "__main__":
     parser.add_argument("--no-dropout", action="store_true")
     parser.add_argument("--no-aleatoric", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--log-every", type=int, default=25,
                         help="Print and save progress every N batches (default: 25)")
     args = parser.parse_args()

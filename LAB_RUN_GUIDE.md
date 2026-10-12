@@ -23,6 +23,28 @@ git pull --ff-only origin main
 
 ## 2. Install
 
+### Native Windows PowerShell
+
+The diagnostic and training Python scripts also run in native Windows. Use
+`python` from your chosen environment instead of `.venv/bin/python`.
+For the lab NVIDIA T1000 8 GB with driver 596.59, replace CPU-only PyTorch with:
+
+```powershell
+python -m pip install --upgrade --force-reinstall torch==2.10.0 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install -r requirements.txt
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+python check_lab_hardware.py --hardware-only
+python check_lab_hardware.py --device cuda --batch-size 8 --output lab_gpu_report.json
+```
+
+`CUDA available` must be true. The driver version reported by `nvidia-smi` does
+not need to match PyTorch's bundled CUDA runtime. The benchmark reports Windows
+CPU/core and RAM information as well as NVIDIA driver details. Run it from the
+repository folder. Send the JSON report before choosing final training settings.
+For explicit GPU training, add `--device cuda` to `paper_experiment.py`; it
+refuses to fall back to CPU when CUDA is unavailable. The Bash/tmux commands
+below are for Linux/WSL, not native PowerShell.
+
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
