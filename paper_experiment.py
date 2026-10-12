@@ -37,6 +37,15 @@ def run(args):
     dow = times.dayofweek.to_numpy(dtype=np.int64)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=args.resume)
+    configuration = {key: value for key, value in vars(args).items()
+                     if key not in {"output", "resume", "epochs", "patience", "log_every"}}
+    config_path = output / "run_config.json"
+    if args.resume and config_path.exists():
+        previous = json.loads(config_path.read_text())
+        changed = [key for key in configuration if previous.get(key) != configuration[key]]
+        if changed:
+            raise ValueError("Resume settings differ from saved run: " + ", ".join(changed))
+    config_path.write_text(json.dumps(configuration, indent=2))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     def emit(event, **fields):
         record = dict(event=event, dataset=args.dataset, **fields)
@@ -97,9 +106,10 @@ def run(args):
         best, best_epoch, log, start_epoch = (state[key] for key in
                                             ("best", "best_epoch", "log", "epoch"))
         np.random.set_state(state["numpy_random_state"])
-        torch.set_rng_state(state["torch_random_state"])
-        if device.type == "cuda":
-            torch.cuda.set_rng_state_all(state["cuda_random_state"])
+        torch.set_rng_state(state["torch_random_state"].cpu())
+        if device.type == "cuda" and state.get("cuda_random_state") is not None:
+            torch.cuda.set_rng_state_all([item.cpu() for item in state["cuda_random_state"]])
+    current_epoch = start_epoch
     started = time.monotonic()
     for epoch in range(start_epoch, args.epochs):
         current_epoch = epoch + 1
@@ -117,6 +127,8 @@ def run(args):
             optimizer.zero_grad()
             mean, variance = model(augmented, augmented_mask, p, d, forward, reverse, edges)
             loss = manuscript_loss(mean, variance, y, target_mask, epoch, args.no_aleatoric)
+            if not torch.isfinite(loss):
+                raise FloatingPointError(f"Non-finite loss at epoch {epoch+1}; resume from last completed checkpoint")
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
             optimizer.step()
@@ -133,6 +145,8 @@ def run(args):
         if not count:
             raise ValueError("Validation split contains no observed targets")
         score = error_sum/count
+        if not math.isfinite(score):
+            raise FloatingPointError("Non-finite validation score; latest completed checkpoint is preserved")
         scheduler.step(score)
         row = {"epoch": epoch+1, "train_loss": float(np.mean(losses)), "val_mse": score,
                "seconds": round(time.monotonic()-started, 1),
@@ -141,7 +155,8 @@ def run(args):
         emit("epoch_complete", **row)
         if score < best:
             best, best_epoch = score, epoch+1
-            torch.save(model.state_dict(), output / "best.pt")
+            torch.save(model.state_dict(), output / "best.tmp")
+            (output / "best.tmp").replace(output / "best.pt")
         latest_tmp = output / "latest.tmp"
         torch.save({"epoch": epoch+1, "model": model.state_dict(),
                     "optimizer": optimizer.state_dict(), "scheduler": scheduler.state_dict(),
@@ -151,7 +166,8 @@ def run(args):
                     "cuda_random_state": torch.cuda.get_rng_state_all() if device.type == "cuda" else None},
                    latest_tmp)
         latest_tmp.replace(output / "latest.pt")
-        (output / "training.json").write_text(json.dumps(log, indent=2))
+        (output / "training.tmp").write_text(json.dumps(log, indent=2))
+        (output / "training.tmp").replace(output / "training.json")
         emit("checkpoint_saved", epoch=current_epoch, best_epoch=best_epoch)
         if epoch+1-best_epoch >= args.patience:
             break
@@ -232,4 +248,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.log_every < 1:
         parser.error("--log-every must be positive")
-    run(args)
+    try:
+        run(args)
+    except (Exception, KeyboardInterrupt) as error:
+        output = Path(args.output)
+        if output.is_dir():
+            (output / "last_error.json").write_text(json.dumps({
+                "error_type": type(error).__name__, "message": str(error),
+                "resume_checkpoint_exists": (output / "latest.pt").exists()
+            }, indent=2))
+        raise

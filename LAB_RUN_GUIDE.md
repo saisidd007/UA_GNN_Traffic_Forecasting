@@ -45,6 +45,23 @@ The CSV datasets and graphs are already in the repository.
 
 ## 3. Start and leave running
 
+Before choosing thread counts, run the short hardware benchmark and share its
+JSON report. It reports logical CPUs, process CPU limits, RAM and GPU details,
+and compares actual model training/validation batches at several thread counts.
+It does not run a full epoch or change your saved training runs.
+
+```bash
+.venv/bin/python -u check_lab_hardware.py
+```
+
+Send `lab_hardware_report.json`. Default test batch size is 2 to reduce GPU memory
+requirements. The fastest thread count depends on batch size; after choosing
+the proposed training batch, repeat with (for example):
+
+```bash
+.venv/bin/python -u check_lab_hardware.py --batch-size 8 --output lab_hardware_batch8.json
+```
+
 Use `tmux` so closing SSH or the terminal does not interrupt training.
 Install tmux using the lab's normal package installation procedure if necessary.
 
@@ -106,6 +123,14 @@ fresh if it has not started yet. Checkpoints save after each completed epoch;
 an interrupted partial epoch is repeated. A dataset whose 50 epochs already
 finished is evaluated again when resumed. Existing incomplete folders without
 a checkpoint require inspection or a new output root; they are not overwritten.
+
+The latest checkpoint is replaced atomically after each completed epoch.
+Resume checks saved model and training settings and refuses changed settings.
+GPU RNG state is restored using CPU tensors as required by PyTorch. Exceptions
+are printed in the log and recorded in `last_error.json` when possible. Progress
+logs do not save optimizer state within an epoch: power loss or an interruption
+can lose the current epoch's work. No script can guarantee against hardware,
+disk, driver, or memory failures. GPU behavior must be tested on the lab machine.
 
 ## 6. Collect results
 
