@@ -38,6 +38,17 @@ def run(args):
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=args.resume)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def emit(event, **fields):
+        record = dict(event=event, dataset=args.dataset, **fields)
+        line = json.dumps(record)
+        print(line, flush=True)
+        with (output / "progress.jsonl").open("a") as stream:
+            stream.write(line + "\n")
+
+    current_epoch = 0
+    emit("startup", device=str(device), threads=args.threads, seed=args.seed,
+         max_epochs=args.epochs, batch_size=args.batch_size,
+         available_windows={key: len(value) for key, value in splits.items()})
     graph = torch.tensor(np.where(adjacency > .1, adjacency, 0), dtype=torch.float32, device=device)
     forward, reverse = transitions(graph)
     edges = graph_edges(graph)
@@ -55,7 +66,11 @@ def run(args):
             np.random.shuffle(indices)
         if limit and limit < len(indices):
             indices = indices[:limit] if shuffle else indices[np.linspace(0, len(indices)-1, limit, dtype=int)]
-        for chunk in np.array_split(indices, math.ceil(len(indices)/args.batch_size)):
+        total_batches = math.ceil(len(indices)/args.batch_size)
+        phase_started = time.monotonic()
+        emit("phase_start", epoch=current_epoch, phase=split,
+             windows=len(indices), total_batches=total_batches)
+        for batch_number, chunk in enumerate(np.array_split(indices, total_batches), 1):
             x = np.stack([values[i:i+12] for i in chunk])
             mask = np.stack([observed[i:i+12] for i in chunk])
             y = np.stack([values[i+12:i+24].T for i in chunk])
@@ -65,6 +80,13 @@ def run(args):
             yield (torch.from_numpy(x).to(device), torch.from_numpy(mask).to(device),
                    torch.from_numpy(y).to(device), torch.from_numpy(y_mask).to(device),
                    torch.from_numpy(p).to(device), torch.from_numpy(d).to(device))
+            if batch_number == 1 or batch_number % args.log_every == 0 or batch_number == total_batches:
+                elapsed = time.monotonic() - phase_started
+                emit("progress", epoch=current_epoch, phase=split,
+                     batch=batch_number, total_batches=total_batches,
+                     percent=round(100 * batch_number / total_batches, 1),
+                     elapsed_seconds=round(elapsed, 1),
+                     phase_eta_seconds=round(elapsed / batch_number * (total_batches-batch_number), 1))
 
     best, best_epoch, log, start_epoch = float("inf"), 0, [], 0
     if args.resume:
@@ -80,6 +102,9 @@ def run(args):
             torch.cuda.set_rng_state_all(state["cuda_random_state"])
     started = time.monotonic()
     for epoch in range(start_epoch, args.epochs):
+        current_epoch = epoch + 1
+        epoch_started = time.monotonic()
+        emit("epoch_start", epoch=current_epoch, max_epochs=args.epochs)
         model.train()
         losses = []
         for x, mask, y, target_mask, p, d in batches("train", args.train_windows, True):
@@ -110,9 +135,10 @@ def run(args):
         score = error_sum/count
         scheduler.step(score)
         row = {"epoch": epoch+1, "train_loss": float(np.mean(losses)), "val_mse": score,
-               "seconds": round(time.monotonic()-started, 1)}
+               "seconds": round(time.monotonic()-started, 1),
+               "epoch_seconds": round(time.monotonic()-epoch_started, 1)}
         log.append(row)
-        print(json.dumps(row), flush=True)
+        emit("epoch_complete", **row)
         if score < best:
             best, best_epoch = score, epoch+1
             torch.save(model.state_dict(), output / "best.pt")
@@ -126,12 +152,14 @@ def run(args):
                    latest_tmp)
         latest_tmp.replace(output / "latest.pt")
         (output / "training.json").write_text(json.dumps(log, indent=2))
+        emit("checkpoint_saved", epoch=current_epoch, best_epoch=best_epoch)
         if epoch+1-best_epoch >= args.patience:
             break
 
     model.load_state_dict(torch.load(output / "best.pt", map_location=device, weights_only=True))
     model.eval()
     predictions, targets, epis, aleas, masks = [], [], [], [], []
+    emit("test_start", best_epoch=best_epoch, mc_passes=args.mc_passes)
     for x, mask, y, target_mask, p, d in batches("test", args.test_windows, False):
         enable_mc_dropout(model)
         with torch.no_grad():
@@ -178,6 +206,7 @@ def run(args):
     np.savez_compressed(output / "predictions.npz", mean=pred, target=target,
                         epistemic=epi, aleatoric=alea, target_observed=target_mask)
     print(json.dumps(result), flush=True)
+    emit("completed", epochs_completed=len(log), metrics_file=str(output / "metrics.json"))
 
 
 if __name__ == "__main__":
@@ -198,4 +227,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-dropout", action="store_true")
     parser.add_argument("--no-aleatoric", action="store_true")
     parser.add_argument("--resume", action="store_true")
-    run(parser.parse_args())
+    parser.add_argument("--log-every", type=int, default=25,
+                        help="Print and save progress every N batches (default: 25)")
+    args = parser.parse_args()
+    if args.log_every < 1:
+        parser.error("--log-every must be positive")
+    run(args)

@@ -94,6 +94,11 @@ python -m venv .venv
 ```
 
 ### Manuscript architecture interpretation
+For the lab's **one-seed, full-data, 50-epoch runs on both datasets**, follow
+[LAB_RUN_GUIDE.md](LAB_RUN_GUIDE.md). Run `bash run_lab_50.sh` after installation;
+use `bash run_lab_50.sh resume` after interruption. Batch progress and checkpoints
+are saved automatically.
+
 ```bash
 .venv/bin/python paper_experiment.py --dataset PEMS-BAY --output paper_results/my_pems_run --batch-size 64 --train-windows 8192 --mc-passes 10
 ```
