@@ -229,6 +229,8 @@ def run(args):
                         epistemic=epi, aleatoric=alea, target_observed=target_mask)
     print(json.dumps(result), flush=True)
     emit("completed", epochs_completed=len(log), metrics_file=str(output / "metrics.json"))
+    (output / "completed.json").write_text(json.dumps({"epochs_completed": len(log),
+                                                     "best_epoch": best_epoch}, indent=2))
 
 
 if __name__ == "__main__":

@@ -41,6 +41,19 @@ python check_lab_hardware.py --device cuda --batch-size 8 --output lab_gpu_repor
 not need to match PyTorch's bundled CUDA runtime. The benchmark reports Windows
 CPU/core and RAM information as well as NVIDIA driver details. Run it from the
 repository folder. Send the JSON report before choosing final training settings.
+The completed T1000/i9-10900K benchmark selected two CPU threads at batch size 8.
+For this lab machine, use the native launcher in your activated Windows venv:
+
+```powershell
+python -u run_lab_50.py
+```
+
+Keep the terminal open and disable computer sleep. Both datasets run sequentially
+on CUDA using seed 42, 50 epochs, all windows, batch size 8 and two CPU threads.
+Logs appear in the terminal and under `paper_results/lab_t1000_full50_seed42/`.
+After an interruption, use `python -u run_lab_50.py --resume`. Datasets whose
+training and testing already completed are skipped. The current partial epoch
+is repeated. This launcher does not restart itself after Windows reboots.
 For explicit GPU training, add `--device cuda` to `paper_experiment.py`; it
 refuses to fall back to CPU when CUDA is unavailable. The Bash/tmux commands
 below are for Linux/WSL, not native PowerShell.
