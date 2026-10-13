@@ -169,6 +169,43 @@ disk, driver, or memory failures. GPU behavior must be tested on the lab machine
 
 ## 6. Collect results
 
+### Generate all four graphs from the supplied final-results PDF
+
+After both datasets finish, in the activated Windows environment run:
+
+```powershell
+git pull --ff-only origin main
+python -u generate_final_graphs.py --device cuda
+```
+
+This creates `final_graphs/` inside each dataset folder, containing:
+
+- `training_validation_curves.png` and `.pdf`: training objective and validation MSE on separate axes.
+- `sensor_dropout_robustness.png` and `.pdf`: random historical sensor failures, 128 sampled test windows, three corruption seeds, 10 MC passes.
+- `sensor_correlation_heatmap.png` and `.pdf`: first 16 sensors, training observations only.
+- `traffic_24h_uncertainty.png` and `.pdf`: first complete test day, sensor index 0, 60-minute forecasts and marginal 95% intervals.
+- `all_graphs.pdf`: all four graphs together.
+- `sensor_dropout_results.json`, `sensor_correlations.csv`, `traffic_24h.csv` and `figure_manifest.json`: source data and figure settings.
+
+There is no retraining. The sensor-dropout graph requires additional inference
+on `best.pt`; the other graphs use saved outputs/data. Corruption error bars
+describe variation across corruption seeds of one trained model, not uncertainty
+across independent training seeds. Allow several minutes for the GPU evaluation;
+runtime depends on the machine and chosen budget. No original PDF numbers are reused.
+
+To plot METR-LA before PEMS-BAY finishes:
+
+```powershell
+python -u generate_final_graphs.py --device cuda --datasets METR-LA
+```
+
+To change the selected sensor/horizon, use `--sensor-index 5 --horizon-step 6`
+(30-minute predictions). `--day YYYY-MM-DD` selects a complete test day.
+`--robustness-windows 512` increases evaluation size. Use `--reuse-robustness`
+to redraw using a previously generated dropout result instead of recomputing it.
+The ablation and published-baseline tables in the source PDF require their own
+experiments; they are not generated or populated with fabricated results.
+
 Each dataset has a folder under `paper_results/lab_full_50_seed42/` containing:
 
 - `metrics.json`: final test scores, uncertainty metrics, device, and run settings.
