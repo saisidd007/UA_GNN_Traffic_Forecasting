@@ -206,6 +206,35 @@ to redraw using a previously generated dropout result instead of recomputing it.
 The ablation and published-baseline tables in the source PDF require their own
 experiments; they are not generated or populated with fabricated results.
 
+### Assemble the final results PDF
+
+After generating both datasets' graphs, run:
+
+```powershell
+python -u generate_results_pdf.py
+```
+
+The report is saved as `paper_results/lab_t1000_full50_seed42/UA_GNN_Final_Results.pdf`,
+with a matching JSON containing the source metrics. It includes both datasets,
+actual model/training settings, physical and normalized errors, R-squared,
+Pearson correlation, uncertainty/calibration metrics, horizon results, matched
+persistence comparisons, and all four graphs per dataset. Saved-prediction
+analysis runs automatically if `prediction_audit.json` does not exist. MAPE
+uses observed target speeds above 1 mph; its threshold and target count are saved.
+No retraining is performed. The analysis can use several GB of RAM with full
+test predictions; allow several minutes on the lab machine.
+
+For a single command that also generates graphs if needed:
+
+```powershell
+python -u generate_results_pdf.py --generate-graphs
+```
+
+Use `--datasets METR-LA` for a METR-LA-only report, and `--output report_metr.pdf`
+to choose a separate filename. Ablation and published baseline efficiency tables
+are explicitly listed as requiring additional experiments, rather than filled
+with original-paper values.
+
 Each dataset has a folder under `paper_results/lab_full_50_seed42/` containing:
 
 - `metrics.json`: final test scores, uncertainty metrics, device, and run settings.
