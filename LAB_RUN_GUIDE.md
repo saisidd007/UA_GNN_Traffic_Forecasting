@@ -237,7 +237,7 @@ with original-paper values.
 
 ## Three-seed training and matched ablations
 
-The next experiment uses new seeds **103 and 137**, together with the already
+The next experiment uses new seeds **123 and 2026**, together with the already
 completed seed **42**. It separately trains reference, no-diffusion, no-dropout
 and no-aleatoric variants on each dataset. The two existing seed-42 reference
 models are reused; seed-42 ablations are added for a complete matched comparison.
@@ -250,6 +250,13 @@ git pull --ff-only origin main
 python run_lab_ablations.py --plan-only
 python -u run_lab_ablations.py
 ```
+
+This one command now performs **training, final testing, ablation summaries and
+full-test sensor-failure evaluation automatically**. Both datasets are included.
+The sensor stage evaluates random and persistent failures at 0%, 10%, 20%, 30%,
+40% and 50%, with three corruption seeds, for each of the three trained references.
+Its files are saved under the main experiment output's `sensor_failures/` folder.
+Use `--skip-sensor-failures` only to deliberately restrict the queue to training/testing.
 
 There are **24 run configurations**, of which **22 require new training**.
 The runner verifies the old references and refuses mismatched settings. It runs
@@ -288,6 +295,67 @@ changes the objective. No-dropout is trained with dropout zero and uses one effe
 deterministic inference pass. No-diffusion removes diffusion rather than introducing
 GCN. These are three specific ablations; removing BiLSTM or graph attention would
 require additional implementation and separate training.
+
+## Final checklist: larger sensor-failure evaluation
+
+The final checklist specifies training seeds **42, 123 and 2026**. The updated
+ablation runner uses those seeds. Previously created seed-103/137 directories,
+if any, are preserved; they are not counted as the specified seeds.
+
+After the full models for the three specified seeds finish, evaluate the entire
+test set, random failures and persistent sensor outages, six rates (0%-50%), and
+three corruption seeds (17, 29, 41):
+
+```powershell
+python -u run_lab_sensor_failures.py
+```
+
+To queue the sensor evaluations automatically after all remaining training:
+
+```powershell
+python -u run_lab_ablations.py
+```
+
+Resume the entire queue with `python -u run_lab_ablations.py --resume`.
+
+All observed targets remain in evaluation even when their input sensor fails.
+Persistent outages disable the same randomly selected sensors throughout the
+evaluation period. Random failures select sensors separately for each historical
+window. Both use the training median for failed inputs, and 10 MC-dropout passes.
+The clean 0% case is evaluated once per pattern/model because corruption seeds
+do not change inputs at 0%. MAE, RMSE, interval coverage and width are saved.
+
+Each completed failure-rate/corruption-seed case is saved atomically. Resume with:
+
+```powershell
+python -u run_lab_sensor_failures.py --resume
+```
+
+An interrupted partial case is repeated. This adds substantial inference time
+but does not retrain models. It streams batches to avoid retaining the complete
+test-window tensors in GPU memory. Outputs go to
+`paper_results/lab_full_test_sensor_failures/`: per-case JSON/CSV,
+`sensor_failure_summary.json`, MAE/RMSE PNGs and `sensor_failure_graphs.pdf`.
+Corruption repeats are averaged within each training seed; primary error bars
+are the sample SD across the three training-seed means. Per-case data preserve
+the variation across corruption seeds separately.
+
+To run this evaluation now using only the completed seed-42 models:
+
+```powershell
+python -u run_lab_sensor_failures.py --training-seeds 42 --output-root paper_results/sensor_failure_seed42_full
+```
+
+For a short smoke check first:
+
+```powershell
+python -u run_lab_sensor_failures.py --training-seeds 42 --windows 32 --mc-passes 2 --output-root paper_results/sensor_failure_smoke
+```
+
+The smoke check is explicitly a smaller-budget evaluation and must not be
+reported as the full-test result. Inspect across-seed MAE/RMSE means and SD from
+the ablation summary before claiming reasonably consistent performance; the
+scripts cannot establish consistency until those runs actually finish.
 
 Each dataset has a folder under `paper_results/lab_full_50_seed42/` containing:
 

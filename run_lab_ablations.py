@@ -1,4 +1,4 @@
-"""Full-data 50-epoch runs: new seeds 103/137 plus matched three-seed ablations.
+"""Full-data 50-epoch runs: new seeds 123/2026 plus matched three-seed ablations.
 
 Reuses seed-42 full models from run_lab_50.py. Runs sequentially on the lab GPU.
 """
@@ -13,7 +13,7 @@ import numpy as np
 
 VARIANTS = {'reference': [], 'no_diffusion': ['--no-diffusion'],
             'no_dropout': ['--no-dropout'], 'no_aleatoric': ['--no-aleatoric']}
-SEEDS = (42, 103, 137)
+SEEDS = (42, 123, 2026)
 
 
 def expected(dataset, seed, variant):
@@ -118,7 +118,7 @@ def write_summary(root, tasks, paired=False):
                     if metric=='coverage_95':
                         ax.axhline(.95,color='black',linestyle='--')
                         ax.set_ylim(0,1)
-                fig.suptitle(f'{dataset}: seeds 42, 103, 137; mean and sample SD')
+                fig.suptitle(f'{dataset}: seeds 42, 123, 2026; mean and sample SD')
                 fig.tight_layout()
                 fig.savefig(root/f'{dataset}_ablations.png',dpi=200)
                 pdf.savefig(fig)
@@ -134,6 +134,10 @@ def main():
     parser.add_argument('--resume',action='store_true')
     parser.add_argument('--plan-only',action='store_true',help='Print schedule without training or requiring a GPU')
     parser.add_argument('--summarize-only',action='store_true',help='Rebuild summary/plots from completed runs')
+    parser.add_argument('--with-sensor-failures',action='store_true',default=True,
+                        help='Run full-test sensor evaluation after training (enabled by default)')
+    parser.add_argument('--skip-sensor-failures',dest='with_sensor_failures',action='store_false',
+                        help='Only train/test models and produce ablation summaries')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parent
     def resolve(path):
@@ -201,8 +205,23 @@ def main():
         write_summary(root,tasks)
     print('All training finished; calculating paired ablation comparisons...',flush=True)
     write_summary(root,tasks,paired=True)
-    (root/'runner_status.json').write_text(json.dumps(dict(state='completed',runs=len(tasks)),indent=2))
+    (root/'runner_status.json').write_text(json.dumps(dict(state='training_completed',runs=len(tasks)),indent=2))
     print(f'Completed. Summaries, CSV tables and ablation plots: {root}',flush=True)
+    if args.with_sensor_failures:
+        command=[sys.executable,'-u',str(repo/'run_lab_sensor_failures.py'),
+                 '--reference-root',str(root),'--existing-seed42',str(existing),
+                 '--output-root',str(root/'sensor_failures'),
+                 '--datasets',*args.datasets]
+        if args.resume:
+            command.append('--resume')
+        (root/'runner_status.json').write_text(json.dumps(dict(state='sensor_failure_evaluation',command=command),indent=2))
+        try:
+            subprocess.run(command,cwd=repo,check=True)
+        except subprocess.CalledProcessError as error:
+            (root/'runner_status.json').write_text(json.dumps(dict(state='sensor_failure_failed',exit_code=error.returncode),indent=2))
+            raise
+    (root/'runner_status.json').write_text(json.dumps(dict(state='completed',runs=len(tasks),sensor_failures=args.with_sensor_failures),indent=2))
+    print(f'Entire experiment queue completed: {root}',flush=True)
 
 
 if __name__=='__main__':
