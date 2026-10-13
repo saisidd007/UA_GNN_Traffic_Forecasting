@@ -235,6 +235,60 @@ to choose a separate filename. Ablation and published baseline efficiency tables
 are explicitly listed as requiring additional experiments, rather than filled
 with original-paper values.
 
+## Three-seed training and matched ablations
+
+The next experiment uses new seeds **103 and 137**, together with the already
+completed seed **42**. It separately trains reference, no-diffusion, no-dropout
+and no-aleatoric variants on each dataset. The two existing seed-42 reference
+models are reused; seed-42 ablations are added for a complete matched comparison.
+All runs retain 50 epochs, full data, batch size 8, two CPU threads and CUDA.
+
+In activated Windows PowerShell:
+
+```powershell
+git pull --ff-only origin main
+python run_lab_ablations.py --plan-only
+python -u run_lab_ablations.py
+```
+
+There are **24 run configurations**, of which **22 require new training**.
+The runner verifies the old references and refuses mismatched settings. It runs
+the four new reference runs first, then missing variants, sequentially. Existing
+seed-42 results are read without overwriting them. This is substantially longer
+than one main-model run: using the observed 19.5-hour cost for a full-model pair,
+11 additional pair-equivalents suggest roughly 214 hours before accounting for
+variant-specific speed and final evaluation. Plan roughly 8-10 days provisionally;
+measure each variant to refine this estimate.
+
+After interruption:
+
+```powershell
+python -u run_lab_ablations.py --resume
+```
+
+Completed runs are skipped. Partial runs resume from the last completed epoch.
+Keep the terminal open and disable sleep. Outputs are under
+`paper_results/lab_full50_three_seed_ablations/DATASET/seed_NUMBER/VARIANT/`.
+Each run retains predictions, metrics and checkpoints; text logs sit next to
+its variant folder. `runner_status.json` records the active run. Partial summary
+tables update after every completed run.
+
+After all runs, the runner automatically saves:
+
+- `per_seed_results.csv`: every seed/variant's metrics.
+- `three_seed_summary.csv`: means and sample standard deviations across seeds.
+- `ablation_summary.json`: source runs, aggregate metrics and paired comparisons.
+- `ablation_graphs.pdf` and dataset-specific PNGs: ablation MAE and coverage plots.
+- `matched_comparison.json` in each ablation folder: paired targets/masks verified
+  against the same-seed reference, with descriptive day-block bootstrap intervals.
+
+Rebuild summary files without training using `python run_lab_ablations.py --summarize-only`.
+No-aleatoric uses MSE-only training and epistemic-only intervals; it intentionally
+changes the objective. No-dropout is trained with dropout zero and uses one effective
+deterministic inference pass. No-diffusion removes diffusion rather than introducing
+GCN. These are three specific ablations; removing BiLSTM or graph attention would
+require additional implementation and separate training.
+
 Each dataset has a folder under `paper_results/lab_full_50_seed42/` containing:
 
 - `metrics.json`: final test scores, uncertainty metrics, device, and run settings.
