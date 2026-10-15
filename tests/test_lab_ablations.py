@@ -10,6 +10,12 @@ from run_lab_ablations import completed, expected, make_plan, write_summary
 
 
 class LabAblationTests(unittest.TestCase):
+    def test_checklist_default_has_only_six_full_models(self):
+        tasks=make_plan(Path('/new'),Path('/existing'),['METR-LA','PEMS-BAY'])
+        self.assertEqual(len(tasks),6)
+        self.assertTrue(all(t['variant']=='reference' for t in tasks))
+        self.assertEqual({t['seed'] for t in tasks},{42,123,2026})
+
     def test_single_default_command_includes_sensor_stage(self):
         from run_lab_ablations import main
         with tempfile.TemporaryDirectory() as temporary:
@@ -28,7 +34,7 @@ class LabAblationTests(unittest.TestCase):
             self.assertEqual(json.loads((Path(temporary)/'runner_status.json').read_text())['state'],'completed')
 
     def test_plan_reuses_existing_seed42_and_adds_two_new_seeds(self):
-        tasks=make_plan(Path('/new'),Path('/existing'),['METR-LA','PEMS-BAY'])
+        tasks=make_plan(Path('/new'),Path('/existing'),['METR-LA','PEMS-BAY'],include_ablations=True)
         self.assertEqual(len(tasks),24)
         reused=[t for t in tasks if t['reuse_existing']]
         self.assertEqual(len(reused),2)
@@ -39,7 +45,7 @@ class LabAblationTests(unittest.TestCase):
     def test_resume_rejects_unmatched_runs_and_summary_sd(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
-            tasks=make_plan(root/'new',root/'existing',['METR-LA'])
+            tasks=make_plan(root/'new',root/'existing',['METR-LA'],include_ablations=True)
             for task in tasks:
                 folder=Path(task['folder'])
                 folder.mkdir(parents=True)

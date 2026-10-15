@@ -235,146 +235,71 @@ to choose a separate filename. Ablation and published baseline efficiency tables
 are explicitly listed as requiring additional experiments, rather than filled
 with original-paper values.
 
-## Three-seed training and matched ablations
+## Latest checklist: three full-model seeds and sensor failures
 
-The next experiment uses new seeds **123 and 2026**, together with the already
-completed seed **42**. It separately trains reference, no-diffusion, no-dropout
-and no-aleatoric variants on each dataset. The two existing seed-42 reference
-models are reused; seed-42 ablations are added for a complete matched comparison.
-All runs retain 50 epochs, full data, batch size 8, two CPU threads and CUDA.
+The current default matches the teacher's latest checklist: full models with
+seeds **42, 123 and 2026**, identical settings, per-seed MAE/RMSE, means and sample
+standard deviations, and larger repeated sensor-failure evaluation. Ablation
+training is **not part of this checklist and is disabled by default**.
 
-In activated Windows PowerShell:
+If all six full-model runs have completed, stop the old runner with Ctrl+C,
+then run in activated PowerShell:
 
 ```powershell
 git pull --ff-only origin main
-python run_lab_ablations.py --plan-only
-python -u run_lab_ablations.py
-```
-
-This one command now performs **training, final testing, ablation summaries and
-full-test sensor-failure evaluation automatically**. Both datasets are included.
-The sensor stage evaluates random and persistent failures at 0%, 10%, 20%, 30%,
-40% and 50%, with three corruption seeds, for each of the three trained references.
-Its files are saved under the main experiment output's `sensor_failures/` folder.
-Use `--skip-sensor-failures` only to deliberately restrict the queue to training/testing.
-
-There are **24 run configurations**, of which **22 require new training**.
-The runner verifies the old references and refuses mismatched settings. It runs
-the four new reference runs first, then missing variants, sequentially. Existing
-seed-42 results are read without overwriting them. This is substantially longer
-than one main-model run: using the observed 19.5-hour cost for a full-model pair,
-11 additional pair-equivalents suggest roughly 214 hours before accounting for
-variant-specific speed and final evaluation. Plan roughly 8-10 days provisionally;
-measure each variant to refine this estimate.
-
-After interruption:
-
-```powershell
 python -u run_lab_ablations.py --resume
 ```
 
-Completed runs are skipped. Partial runs resume from the last completed epoch.
-Keep the terminal open and disable sleep. Outputs are under
-`paper_results/lab_full50_three_seed_ablations/DATASET/seed_NUMBER/VARIANT/`.
-Each run retains predictions, metrics and checkpoints; text logs sit next to
-its variant folder. `runner_status.json` records the active run. Partial summary
-tables update after every completed run.
+The completed seed-42 models are read from `paper_results/lab_t1000_full50_seed42`.
+The completed seed-123/2026 references are read from
+`paper_results/lab_full50_three_seed_ablations/DATASET/seed_NUMBER/reference`.
+No full model is retrained if its saved completion artifacts and settings match.
+Previously started ablation folders are preserved but are not selected by the
+default schedule. Do not run both old and updated queues simultaneously.
 
-After all runs, the runner automatically saves:
+The runner summarizes full-model results, then evaluates full test sets at
+0%, 10%, 20%, 30%, 40% and 50% failure, using corruption seeds 17, 29 and 41.
+It evaluates both random failures and persistent sensor outages. Failed inputs
+use the training median; observed targets remain included. The clean 0% case
+is evaluated once because corruption seeds do not change clean inputs.
 
-- `per_seed_results.csv`: every seed/variant's metrics.
-- `three_seed_summary.csv`: means and sample standard deviations across seeds.
-- `ablation_summary.json`: source runs, aggregate metrics and paired comparisons.
-- `ablation_graphs.pdf` and dataset-specific PNGs: ablation MAE and coverage plots.
-- `matched_comparison.json` in each ablation folder: paired targets/masks verified
-  against the same-seed reference, with descriptive day-block bootstrap intervals.
+Outputs remain under `paper_results/lab_full50_three_seed_ablations/`:
 
-Rebuild summary files without training using `python run_lab_ablations.py --summarize-only`.
-No-aleatoric uses MSE-only training and epistemic-only intervals; it intentionally
-changes the objective. No-dropout is trained with dropout zero and uses one effective
-deterministic inference pass. No-diffusion removes diffusion rather than introducing
-GCN. These are three specific ablations; removing BiLSTM or graph attention would
-require additional implementation and separate training.
+- `per_seed_results.csv`: each full model's test MAE/RMSE and uncertainty metrics.
+- `three_seed_summary.csv` and `multi_seed_summary.json`: means and sample SD.
+- `multi_seed_graphs.pdf`: full-model summary plots.
+- `sensor_failures/`: detailed per-case JSON/CSV, MAE/RMSE error-bar plots,
+  `sensor_failure_summary.json` and `sensor_failure_graphs.pdf`.
+- `runner_status.json`: active stage or completion status.
 
-## Final checklist: larger sensor-failure evaluation
+Sensor-corruption repeats are averaged within each training seed. Primary
+sensor-failure error bars are SD across the three training-seed means; per-case
+CSV preserves corruption-seed variation separately. Persistent outages keep
+one selected failed sensor subset throughout the evaluation period. A case
+saves atomically after all its test batches; a partial case repeats on resume.
+This stage needs extra inference time, not model training. Its measured runtime
+should be estimated from the first completed cases.
 
-The final checklist specifies training seeds **42, 123 and 2026**. The updated
-ablation runner uses those seeds. Previously created seed-103/137 directories,
-if any, are preserved; they are not counted as the specified seeds.
+Check across-seed variability after results exist before claiming reproducibility.
+The script reports statistics; it does not automatically declare consistency.
 
-After the full models for the three specified seeds finish, evaluate the entire
-test set, random failures and persistent sensor outages, six rates (0%-50%), and
-three corruption seeds (17, 29, 41):
-
-```powershell
-python -u run_lab_sensor_failures.py
-```
-
-To queue the sensor evaluations automatically after all remaining training:
+Optional commands:
 
 ```powershell
-python -u run_lab_ablations.py
+python run_lab_ablations.py --plan-only
+python run_lab_ablations.py --summarize-only
+python -u run_lab_ablations.py --resume --skip-sensor-failures
 ```
 
-Resume the entire queue with `python -u run_lab_ablations.py --resume`.
+Only if separately requested, `--include-ablations` adds no-diffusion,
+no-dropout and no-aleatoric training for all three seeds (18 extra runs).
+Without that explicit flag, none of those additional models is trained.
 
-All observed targets remain in evaluation even when their input sensor fails.
-Persistent outages disable the same randomly selected sensors throughout the
-evaluation period. Random failures select sensors separately for each historical
-window. Both use the training median for failed inputs, and 10 MC-dropout passes.
-The clean 0% case is evaluated once per pattern/model because corruption seeds
-do not change inputs at 0%. MAE, RMSE, interval coverage and width are saved.
-
-Each completed failure-rate/corruption-seed case is saved atomically. Resume with:
-
-```powershell
-python -u run_lab_sensor_failures.py --resume
-```
-
-An interrupted partial case is repeated. This adds substantial inference time
-but does not retrain models. It streams batches to avoid retaining the complete
-test-window tensors in GPU memory. Outputs go to
-`paper_results/lab_full_test_sensor_failures/`: per-case JSON/CSV,
-`sensor_failure_summary.json`, MAE/RMSE PNGs and `sensor_failure_graphs.pdf`.
-Corruption repeats are averaged within each training seed; primary error bars
-are the sample SD across the three training-seed means. Per-case data preserve
-the variation across corruption seeds separately.
-
-To run this evaluation now using only the completed seed-42 models:
-
-```powershell
-python -u run_lab_sensor_failures.py --training-seeds 42 --output-root paper_results/sensor_failure_seed42_full
-```
-
-For a short smoke check first:
+The sensor stage can also be run separately with
+`python -u run_lab_sensor_failures.py --resume`. For a short check on only seed 42:
 
 ```powershell
 python -u run_lab_sensor_failures.py --training-seeds 42 --windows 32 --mc-passes 2 --output-root paper_results/sensor_failure_smoke
 ```
 
-The smoke check is explicitly a smaller-budget evaluation and must not be
-reported as the full-test result. Inspect across-seed MAE/RMSE means and SD from
-the ablation summary before claiming reasonably consistent performance; the
-scripts cannot establish consistency until those runs actually finish.
-
-Each dataset has a folder under `paper_results/lab_full_50_seed42/` containing:
-
-- `metrics.json`: final test scores, uncertainty metrics, device, and run settings.
-- `persistence_baseline.json`: matched persistence comparison.
-- `training.json`: completed epochs, training loss, validation error, epoch time.
-- `best.pt`: validation-best model.
-- `latest.pt`: checkpoint for resuming training.
-- `predictions.npz`: saved test predictions and uncertainties.
-- `progress.jsonl`: detailed progress events.
-
-Check that `epochs_completed` is 50 in both `metrics.json` files before reporting
-the runs as complete. Preserve the entire output directory.
-
-## Runtime
-
-On our CPU machine with four threads and batch size 64, measured first epochs
-including full validation took 55 minutes for METR-LA and 2 hours 19 minutes
-for PEMS-BAY. Extrapolated training time for both 50-epoch runs is about 162 hours,
-plus final test evaluation. These timings do not predict the lab GPU's runtime.
-Use the first completed epoch's `epoch_seconds` on the lab machine to estimate
-its remaining training time; final MC evaluation adds extra time.
+That smoke check is not the full-test evaluation and must not be reported as such.

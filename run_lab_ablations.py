@@ -1,4 +1,4 @@
-"""Full-data 50-epoch runs: new seeds 123/2026 plus matched three-seed ablations.
+"""Checklist runner: three full-model seeds and full-test sensor evaluation.
 
 Reuses seed-42 full models from run_lab_50.py. Runs sequentially on the lab GPU.
 """
@@ -41,11 +41,11 @@ def completed(folder, settings):
     return True
 
 
-def make_plan(root, existing, datasets):
+def make_plan(root, existing, datasets, include_ablations=False):
     tasks=[]
     for dataset in datasets:
         for seed in SEEDS:
-            for variant in VARIANTS:
+            for variant in (VARIANTS if include_ablations else ['reference']):
                 reuse=seed==42 and variant=='reference'
                 folder=existing/dataset if reuse else root/dataset/f'seed_{seed}'/variant
                 tasks.append(dict(dataset=dataset,seed=seed,variant=variant,
@@ -91,6 +91,7 @@ def write_summary(root, tasks, paired=False):
     temporary=root/'ablation_summary.tmp'
     temporary.write_text(json.dumps(summary,indent=2))
     temporary.replace(root/'ablation_summary.json')
+    (root/'multi_seed_summary.json').write_text(json.dumps(summary,indent=2))
     if rows:
         with (root/'per_seed_results.csv').open('w',newline='',encoding='utf-8') as stream:
             writer=csv.DictWriter(stream,fieldnames=list(rows[0]))
@@ -106,7 +107,8 @@ def write_summary(root, tasks, paired=False):
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
-        with PdfPages(root/'ablation_graphs.pdf') as pdf:
+        includes_ablations=any(t['variant']!='reference' for t in tasks)
+        with PdfPages(root/('ablation_graphs.pdf' if includes_ablations else 'multi_seed_graphs.pdf')) as pdf:
             for dataset in sorted({r['dataset'] for r in aggregate}):
                 subset=[r for r in aggregate if r['dataset']==dataset]
                 fig,axes=plt.subplots(1,2,figsize=(12,4))
@@ -120,7 +122,7 @@ def write_summary(root, tasks, paired=False):
                         ax.set_ylim(0,1)
                 fig.suptitle(f'{dataset}: seeds 42, 123, 2026; mean and sample SD')
                 fig.tight_layout()
-                fig.savefig(root/f'{dataset}_ablations.png',dpi=200)
+                fig.savefig(root/f'{dataset}_{"ablations" if includes_ablations else "full_model"}.png',dpi=200)
                 pdf.savefig(fig)
                 plt.close(fig)
     return summary
@@ -134,6 +136,8 @@ def main():
     parser.add_argument('--resume',action='store_true')
     parser.add_argument('--plan-only',action='store_true',help='Print schedule without training or requiring a GPU')
     parser.add_argument('--summarize-only',action='store_true',help='Rebuild summary/plots from completed runs')
+    parser.add_argument('--include-ablations',action='store_true',
+                        help='Explicitly add separately trained ablations; not required by the latest checklist')
     parser.add_argument('--with-sensor-failures',action='store_true',default=True,
                         help='Run full-test sensor evaluation after training (enabled by default)')
     parser.add_argument('--skip-sensor-failures',dest='with_sensor_failures',action='store_false',
@@ -144,10 +148,10 @@ def main():
         path=Path(path)
         return path.resolve() if path.is_absolute() else (repo/path).resolve()
     root,existing=resolve(args.output_root),resolve(args.existing_seed42)
-    tasks=make_plan(root,existing,args.datasets)
+    tasks=make_plan(root,existing,args.datasets,args.include_ablations)
     if args.plan_only:
         print(json.dumps(tasks,indent=2))
-        print(f'{len(tasks)} total runs; {len(args.datasets)} existing full-model runs reused; {len(tasks)-len(args.datasets)} new runs.')
+        print(f'{len(tasks)} configurations; completed runs are reused automatically. No training started.')
         return
     for task in tasks:
         if task['reuse_existing'] and not completed(Path(task['folder']),expected(task['dataset'],task['seed'],task['variant'])):
@@ -203,7 +207,7 @@ def main():
         if not completed(folder,settings):
             raise RuntimeError(f'{folder}: child exited without completed run artifacts')
         write_summary(root,tasks)
-    print('All training finished; calculating paired ablation comparisons...',flush=True)
+    print('Full-model runs complete; calculating requested summaries...',flush=True)
     write_summary(root,tasks,paired=True)
     (root/'runner_status.json').write_text(json.dumps(dict(state='training_completed',runs=len(tasks)),indent=2))
     print(f'Completed. Summaries, CSV tables and ablation plots: {root}',flush=True)
