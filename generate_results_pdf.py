@@ -40,7 +40,36 @@ def mape(folder, config):
                 mape_target_threshold_mph=1., mape_observed_targets=count)
 
 
-def build_report(root, output, datasets, refresh_analysis=False, seed=42):
+def persistence_rmse_by_horizon(config, baseline):
+    """CPU baseline calculation only; never loads a trained model or predictions."""
+    raw,_,_=load_data(config['dataset'])
+    values,observed,_,scale,splits,_=prepare(raw,train_ratio=config['train_ratio'],val_ratio=config['val_ratio'])
+    indices=splits['test']
+    if config['test_windows']!=len(indices):
+        raise ValueError('Expected full-test results; split/window count differs')
+    squares=np.zeros(12,dtype=np.float64)
+    absolute=np.zeros(12,dtype=np.float64)
+    counts=np.zeros(12,dtype=np.int64)
+    for start in range(0,len(indices),128):
+        chosen=indices[start:start+128]
+        future=chosen[:,None]+12+np.arange(12)[None,:]
+        target=values[future].transpose(0,2,1)
+        valid=observed[future].transpose(0,2,1)
+        error=(values[chosen+11,:,None]-target)*scale[None,:,None]
+        squares+=(np.square(error)*valid).sum(axis=(0,1),dtype=np.float64)
+        absolute+=(np.abs(error)*valid).sum(axis=(0,1),dtype=np.float64)
+        counts+=valid.sum(axis=(0,1))
+    if np.any(counts==0):
+        raise ValueError('No observed targets at one or more horizons')
+    # Refuse a different dataset/split rather than silently changing the baseline.
+    if int(counts.sum())!=baseline['observed_test_targets'] or not np.isclose(
+            np.sqrt(squares.sum()/counts.sum()),baseline['rmse_mph'],rtol=1e-5,atol=1e-5):
+        raise ValueError('Recomputed persistence baseline differs from the saved report')
+    np.testing.assert_allclose(absolute/counts,baseline['mae_by_horizon_mph'],rtol=1e-5,atol=1e-5)
+    return np.sqrt(squares/counts).tolist()
+
+
+def build_report(root, output, datasets, refresh_analysis=False, seed=42, cached_report=None):
     fonts = Path(reportlab.__file__).resolve().parent/'fonts'
     pdfmetrics.registerFont(TTFont('ReportSans', str(fonts/'Vera.ttf')))
     pdfmetrics.registerFont(TTFont('ReportSansBold', str(fonts/'VeraBd.ttf')))
@@ -51,6 +80,12 @@ def build_report(root, output, datasets, refresh_analysis=False, seed=42):
     styles['Normal'].fontSize = 9
     styles['Normal'].leading = 13
     story, summaries = [], {}
+    if cached_report:
+        saved=json.loads(Path(cached_report).read_text())
+        summaries={dataset:saved[dataset] for dataset in datasets}
+        for dataset,s in summaries.items():
+            if s['metrics']['seed']!=seed or s['metrics']['dataset']!=dataset:
+                raise ValueError('Cached report seed/dataset mismatch')
 
     def text(content, style='Normal'):
         story.append(Paragraph(escape(str(content)), styles[style]))
@@ -69,7 +104,7 @@ def build_report(root, output, datasets, refresh_analysis=False, seed=42):
         story.append(Spacer(1,12))
 
     # Validate outputs before computing analyses or creating the report.
-    for dataset in datasets:
+    for dataset in ([] if cached_report else datasets):
         folder = dataset_run(root,dataset,seed)
         for filename in ['metrics.json','training.json','predictions.npz','persistence_baseline.json',
                          'final_graphs/figure_manifest.json','final_graphs/sensor_dropout_results.json',
@@ -98,6 +133,11 @@ def build_report(root, output, datasets, refresh_analysis=False, seed=42):
             figure_manifest=json.loads((folder/'final_graphs/figure_manifest.json').read_text()),
             robustness=json.loads((folder/'final_graphs/sensor_dropout_results.json').read_text()),
             training_seconds=sum(r['epoch_seconds'] for r in history))
+
+    for dataset,s in summaries.items():
+        if 'rmse_by_horizon_mph' not in s['persistence']:
+            print(f'{dataset}: calculating missing persistence horizon RMSE on CPU only...',flush=True)
+            s['persistence']['rmse_by_horizon_mph']=persistence_rmse_by_horizon(s['metrics'],s['persistence'])
 
     text('UA-GNN Traffic Forecasting', 'Title')
     text('Corrected implementation: single-seed, 50-epoch experimental results', 'Heading2')
@@ -156,8 +196,10 @@ def build_report(root, output, datasets, refresh_analysis=False, seed=42):
                ['Persistence',number(b['mae_mph']),number(b['rmse_mph'])],
                ['Error reduction (%)',number(100*(1-m['mae_mph']/b['mae_mph']),2),
                 number(100*(1-m['rmse_mph']/b['rmse_mph']),2)]],('Method','MAE (mph)','RMSE (mph)'))
-        table([[str((i+1)*5),number(m['mae_by_horizon_mph'][i]),number(b['mae_by_horizon_mph'][i])]
-               for i in range(12)],('Horizon (minutes)','Model MAE (mph)','Persistence MAE (mph)'))
+        table([[str((i+1)*5),number(m['mae_by_horizon_mph'][i]),number(b['mae_by_horizon_mph'][i]),
+                number(a['rmse_by_horizon_mph'][i]),number(b['rmse_by_horizon_mph'][i])]
+               for i in range(12)],('Horizon (minutes)','Model MAE (mph)','Persistence MAE (mph)',
+                                    'Model RMSE (mph)','Persistence RMSE (mph)'))
         ci=a.get('paired_daily_block_bootstrap_95ci_mph')
         if ci:
             text('Descriptive paired day-block bootstrap 95% interval for model minus persistence MAE: '
@@ -204,15 +246,23 @@ def main():
     parser.add_argument('--datasets',nargs='+',choices=['METR-LA','PEMS-BAY'],default=['METR-LA','PEMS-BAY'])
     parser.add_argument('--output',help='Default: RESULTS_ROOT/UA_GNN_Final_Results.pdf')
     parser.add_argument('--refresh-analysis',action='store_true')
+    parser.add_argument('--tables-only',action='store_true',help='Reuse original report JSON and existing graphs; calculate missing persistence RMSE only')
     parser.add_argument('--generate-graphs',action='store_true',help='Generate all four figures first (includes extra checkpoint inference)')
     args=parser.parse_args()
+    if args.tables_only and (args.generate_graphs or args.refresh_analysis):
+        parser.error('--tables-only cannot regenerate graphs or analysis')
     root=report_root(args.seed,args.results_root)
     if args.generate_graphs:
         subprocess.run([sys.executable,'-u',str(Path(__file__).with_name('generate_final_graphs.py')),
                         '--results-root',str(root),'--seed',str(args.seed),'--datasets',*args.datasets],check=True)
     filename='UA_GNN_Final_Results.pdf' if args.seed==42 else f'UA_GNN_Final_Results_seed{args.seed}.pdf'
+    cached=root/Path(filename).with_suffix('.json') if args.tables_only else None
+    if cached and not cached.exists():
+        parser.error(f'Saved report JSON missing: {cached}. This mode will not rerun analysis.')
+    if args.tables_only:
+        filename=filename.replace('.pdf','_with_persistence_RMSE.pdf')
     output=Path(args.output).resolve() if args.output else root/filename
-    build_report(root,output,args.datasets,args.refresh_analysis,args.seed)
+    build_report(root,output,args.datasets,args.refresh_analysis,args.seed,cached)
 
 
 if __name__=='__main__':

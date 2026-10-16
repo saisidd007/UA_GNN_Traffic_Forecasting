@@ -237,6 +237,29 @@ with original-paper values.
 
 ## Latest checklist: three full-model seeds and sensor failures
 
+### Add persistence horizon RMSE to already generated PDFs
+
+Download only the updated `generate_results_pdf.py` and the new
+`add_persistence_rmse_to_pdfs.py` into the checkout if a training queue is active;
+there is no need to change training scripts. Then run:
+
+```powershell
+python -u add_persistence_rmse_to_pdfs.py
+```
+
+This updates reports for the actual seeds **42, 123 and 2026**. It reads the
+existing report JSON and graph images, calculates only persistence RMSE at all
+12 horizons from the original test split, and adds model/persistence RMSE columns
+to the existing horizon MAE table. It verifies the recomputed baseline's overall
+RMSE, horizon MAE and target count against the saved results. No model inference,
+training, calibration analysis, MAPE recalculation or graph generation occurs.
+It refuses to proceed if the original report JSON is missing.
+
+The new PDFs are named `UA_GNN_Final_Results_with_persistence_RMSE.pdf` for seed 42,
+and `UA_GNN_Final_Results_seed123_with_persistence_RMSE.pdf` /
+`UA_GNN_Final_Results_seed2026_with_persistence_RMSE.pdf` for the other seeds,
+beside their original PDFs. The originals are preserved.
+
 ### Reports for seeds 123 and 2026
 
 After the full models finish, generate the same results-and-graphs reports used
