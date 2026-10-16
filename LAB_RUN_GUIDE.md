@@ -237,6 +237,35 @@ with original-paper values.
 
 ## Latest checklist: three full-model seeds and sensor failures
 
+### Reports for seeds 123 and 2026
+
+After the full models finish, generate the same results-and-graphs reports used
+for seed 42, without retraining:
+
+```powershell
+git pull --ff-only origin main
+python -u generate_seed_reports.py
+```
+
+This reads the `DATASET/seed_123/reference` and `DATASET/seed_2026/reference`
+folders, generates each run's graphs and saved-prediction analysis as needed,
+and creates two reports under `paper_results/lab_full50_three_seed_ablations/`:
+
+- `UA_GNN_Final_Results_seed123.pdf`
+- `UA_GNN_Final_Results_seed2026.pdf`
+
+Each report includes both datasets, the correctly labelled training seed, horizon
+MAE/RMSE, calibration/CRPS/ECE, matched persistence comparisons and four graph
+types per dataset. The graphs require additional sampled sensor-dropout inference;
+they do not train models. These small report-figure evaluations are separate from
+the complete-test sensor-failure checklist evaluation. Matching JSON reports and
+per-run `prediction_audit.json` files are also saved.
+
+For METR-LA only, use `python -u generate_seed_reports.py --datasets METR-LA`.
+To create just one report, use
+`python -u generate_results_pdf.py --seed 123 --generate-graphs` (or seed 2026).
+The original `python -u generate_results_pdf.py` still defaults to seed 42.
+
 The current default matches the teacher's latest checklist: full models with
 seeds **42, 123 and 2026**, identical settings, per-seed MAE/RMSE, means and sample
 standard deviations, and larger repeated sensor-failure evaluation. Ablation

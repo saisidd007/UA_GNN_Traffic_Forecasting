@@ -17,6 +17,7 @@ from reportlab.platypus import Image, PageBreak, Paragraph, SimpleDocTemplate, S
 
 from analyze_predictions import analyze
 from corrected_experiment import load_data, prepare
+from report_run_paths import dataset_run, report_root
 
 
 def number(value, digits=4):
@@ -39,7 +40,7 @@ def mape(folder, config):
                 mape_target_threshold_mph=1., mape_observed_targets=count)
 
 
-def build_report(root, output, datasets, refresh_analysis=False):
+def build_report(root, output, datasets, refresh_analysis=False, seed=42):
     fonts = Path(reportlab.__file__).resolve().parent/'fonts'
     pdfmetrics.registerFont(TTFont('ReportSans', str(fonts/'Vera.ttf')))
     pdfmetrics.registerFont(TTFont('ReportSansBold', str(fonts/'VeraBd.ttf')))
@@ -69,7 +70,7 @@ def build_report(root, output, datasets, refresh_analysis=False):
 
     # Validate outputs before computing analyses or creating the report.
     for dataset in datasets:
-        folder = root/dataset
+        folder = dataset_run(root,dataset,seed)
         for filename in ['metrics.json','training.json','predictions.npz','persistence_baseline.json',
                          'final_graphs/figure_manifest.json','final_graphs/sensor_dropout_results.json',
                          'final_graphs/training_validation_curves.png','final_graphs/sensor_correlation_heatmap.png',
@@ -77,8 +78,8 @@ def build_report(root, output, datasets, refresh_analysis=False):
             if not (folder/filename).is_file():
                 raise FileNotFoundError(f'Missing {folder/filename}. Finish training and run generate_final_graphs.py first.')
         metrics = json.loads((folder/'metrics.json').read_text())
-        if metrics['epochs_completed'] != 50 or metrics['seed'] != 42 or metrics['dataset'] != dataset:
-            raise ValueError(f'{folder}: expected dataset-matched, completed 50-epoch seed-42 run')
+        if metrics['epochs_completed'] != 50 or metrics['seed'] != seed or metrics['dataset'] != dataset:
+            raise ValueError(f'{folder}: expected dataset-matched, completed 50-epoch seed-{seed} run')
         if metrics['architecture'] != 'paper_interpretation_v1':
             raise ValueError(f'{folder}: architecture is not the supported manuscript interpretation')
         audit_path = folder/'prediction_audit.json'
@@ -100,7 +101,7 @@ def build_report(root, output, datasets, refresh_analysis=False):
 
     text('UA-GNN Traffic Forecasting', 'Title')
     text('Corrected implementation: single-seed, 50-epoch experimental results', 'Heading2')
-    text('This report uses saved test predictions, validation-selected checkpoints and measured results from the latest lab runs. Each dataset was trained with seed 42. The manuscript leaves some architecture details unspecified, so this implementation is an interpretation rather than an exact reproduction.')
+    text(f'This report uses saved test predictions, validation-selected checkpoints and measured results from the latest lab runs. Each dataset was trained with seed {seed}. The manuscript leaves some architecture details unspecified, so this implementation is an interpretation rather than an exact reproduction.')
     rows = []
     for dataset,s in summaries.items():
         m=s['metrics']
@@ -112,7 +113,7 @@ def build_report(root, output, datasets, refresh_analysis=False):
 
     for dataset,s in summaries.items():
         m,a,b=s['metrics'],s['audit'],s['persistence']
-        folder=root/dataset
+        folder=dataset_run(root,dataset,seed)
         story.append(PageBreak())
         text(dataset+' - model and training configuration','Heading1')
         table([['Architecture',m['architecture']],['Sensors',207 if dataset=='METR-LA' else 325],
@@ -198,18 +199,20 @@ def build_report(root, output, datasets, refresh_analysis=False):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--results-root',default='paper_results/lab_t1000_full50_seed42')
+    parser.add_argument('--results-root',help='Optional override of the results root')
+    parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--datasets',nargs='+',choices=['METR-LA','PEMS-BAY'],default=['METR-LA','PEMS-BAY'])
     parser.add_argument('--output',help='Default: RESULTS_ROOT/UA_GNN_Final_Results.pdf')
     parser.add_argument('--refresh-analysis',action='store_true')
     parser.add_argument('--generate-graphs',action='store_true',help='Generate all four figures first (includes extra checkpoint inference)')
     args=parser.parse_args()
-    root=Path(args.results_root).resolve()
+    root=report_root(args.seed,args.results_root)
     if args.generate_graphs:
         subprocess.run([sys.executable,'-u',str(Path(__file__).with_name('generate_final_graphs.py')),
-                        '--results-root',str(root),'--datasets',*args.datasets],check=True)
-    output=Path(args.output).resolve() if args.output else root/'UA_GNN_Final_Results.pdf'
-    build_report(root,output,args.datasets,args.refresh_analysis)
+                        '--results-root',str(root),'--seed',str(args.seed),'--datasets',*args.datasets],check=True)
+    filename='UA_GNN_Final_Results.pdf' if args.seed==42 else f'UA_GNN_Final_Results_seed{args.seed}.pdf'
+    output=Path(args.output).resolve() if args.output else root/filename
+    build_report(root,output,args.datasets,args.refresh_analysis,args.seed)
 
 
 if __name__=='__main__':

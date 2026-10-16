@@ -18,6 +18,7 @@ import torch
 
 from corrected_experiment import load_data, prepare
 from paper_model import PaperUAGNN, enable_mc_dropout, graph_edges, transitions
+from report_run_paths import dataset_run, report_root
 
 
 def robustness(folder, config, raw, timestamps, adjacency, args):
@@ -87,8 +88,9 @@ def robustness(folder, config, raw, timestamps, adjacency, args):
 
 def generate(folder, args):
     config = json.loads((folder/'metrics.json').read_text())
-    if config['epochs_completed'] != 50 or config['seed'] != 42:
-        raise ValueError(f'{folder}: expected completed 50-epoch seed-42 run')
+    requested_seed=getattr(args,'seed',42)
+    if config['epochs_completed'] != 50 or config['seed'] != requested_seed:
+        raise ValueError(f'{folder}: expected completed 50-epoch seed-{requested_seed} run')
     if config['architecture'] != 'paper_interpretation_v1':
         raise ValueError('This graph generator requires the manuscript architecture interpretation')
     history = json.loads((folder/'training.json').read_text())
@@ -120,7 +122,7 @@ def generate(folder, args):
         axes[1].legend()
         for ax in axes:
             ax.grid(alpha=.2)
-        fig.suptitle(f"{config['dataset']} · seed 42 · 50 epochs")
+        fig.suptitle(f"{config['dataset']} · seed {config['seed']} · 50 epochs")
         save(fig, 'training_validation_curves')
 
         # Correlations use training observations only; missing values stay missing.
@@ -199,7 +201,8 @@ def generate(folder, args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--results-root', default='paper_results/lab_t1000_full50_seed42')
+    parser.add_argument('--results-root', help='Optional override of the results root')
+    parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--datasets', nargs='+', choices=['METR-LA', 'PEMS-BAY'], default=['METR-LA', 'PEMS-BAY'])
     parser.add_argument('--device', choices=['auto', 'cpu', 'cuda'], default='auto')
     parser.add_argument('--threads', type=int, default=2)
@@ -221,14 +224,15 @@ def main():
     if args.device == 'cuda' and not torch.cuda.is_available():
         parser.error('CUDA requested but unavailable in this Python environment')
     torch.set_num_threads(args.threads)
-    root = Path(args.results_root).resolve()
+    root = report_root(args.seed,args.results_root)
     # Check both runs before doing work; avoid silently reading incomplete outputs.
     for dataset in args.datasets:
         for name in ['metrics.json','training.json','predictions.npz','best.pt']:
-            if not (root/dataset/name).exists():
-                parser.error(f'Missing {root/dataset/name}; wait for training/testing to finish')
+            path=dataset_run(root,dataset,args.seed)/name
+            if not path.exists():
+                parser.error(f'Missing {path}; wait for training/testing to finish')
     for dataset in args.datasets:
-        generate(root/dataset, args)
+        generate(dataset_run(root,dataset,args.seed), args)
 
 
 if __name__ == '__main__':
