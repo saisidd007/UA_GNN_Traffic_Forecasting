@@ -237,6 +237,28 @@ with original-paper values.
 
 ## Latest checklist: three full-model seeds and sensor failures
 
+### PEMS-BAY ablations only: seeds 42 and 123
+
+After stopping the previous queue, download `run_pems_ablations_42_123.py` into
+the existing checkout and run:
+
+```powershell
+python -u run_pems_ablations_42_123.py
+```
+
+It schedules only six PEMS-BAY runs: no-aleatoric, no-diffusion and no-dropout
+for seeds 42 and 123. It reuses completed ablations, automatically resumes
+partial `latest.pt` checkpoints, and trains missing variants for 50 epochs.
+The full-model references are verified and reused. It does not schedule
+METR-LA, seed 2026, full-model training or sensor-failure tests. Existing METR-LA
+results are untouched. Re-run the same command to resume after interruption.
+
+Outputs use the existing ablation folders, with a separate consolidated report
+under `paper_results/lab_full50_three_seed_ablations/PEMS-BAY/ablation_report_seeds42_123/`:
+per-seed CSV, two-seed mean/SD CSV, JSON paired comparisons, error plots and PDF.
+The script imports existing shared helpers from `run_lab_ablations.py` but does
+not launch its training queue. `--plan-only` prints the six selected tasks.
+
 ### Add persistence horizon RMSE to already generated PDFs
 
 Download only the updated `generate_results_pdf.py` and the new
